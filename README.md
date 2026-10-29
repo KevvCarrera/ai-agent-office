@@ -56,7 +56,7 @@ flowchart TD
 
 - **🎮 2D Pixel-Art Virtual Office:** Built with Phaser.js 3 and TypeScript, rendering top-down offices with modular rooms, desks, meeting areas, and animated sprites.
 - **💰 Zero API Cost (Passive Observer Pattern):** Hooks into your local developer environment by monitoring log files or event pipes without making external API requests.
-- **🔄 Multi-Model & Multi-Vendor:** Supports agents powered by Anthropic (Claude 3.7 Sonnet / Opus), Google (Gemini 2.5 Flash / Pro), OpenAI, or local models (Ollama).
+- **🔄 Multi-Model & Multi-Vendor:** Supports agents powered by Anthropic (Claude 3.7 Sonnet / Opus / Haiku via Claude Code), Google (Gemini 2.5 Flash / Pro via Antigravity), OpenCode, OpenAI, or local models (Ollama).
 - **⚙️ Declarative Office Configuration (`office.config.yaml`):** Configure rooms, desk coordinates, agent metadata, avatars, and file-watching paths without modifying code.
 - **⚡ Real-Time Streaming:** Low-latency event streaming via WebSockets.
 
@@ -107,20 +107,55 @@ agents:
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (Guía de Ejecución Rápida)
 
-*(Coming soon as the initial scaffolding is committed)*
+### 1. Requisitos Previos
+* Node.js v18+ (recomendado v20 o v24).
+* npm v9+.
 
+### 2. Instalación
 ```bash
-# Clone the repository
+# Clonar el repositorio
 git clone https://github.com/KevvCarrera/ai-agent-office.git
 cd ai-agent-office
 
-# Install dependencies
+# Instalar dependencias en todo el monorepo
 npm install
+```
 
-# Start the event watcher daemon & visualizer
+### 3. Iniciar la Oficina Virtual (Servidor + Cliente)
+Con un solo comando arrancarás el daemon backend (puerto 4000) y el visualizador Phaser 3 (puerto 3000):
+
+```bash
 npm run dev
+```
+
+* **Visualizador Web:** Abre tu navegador en [http://localhost:3000](http://localhost:3000)
+* **API y Healthcheck:** [http://localhost:4000/health](http://localhost:4000/health)
+
+> [!TIP]
+> Por defecto, el servidor se inicia con el **Generador Mock Autónomo** activo si no encuentra ficheros de logs físicos. Verás inmediatamente a los agentes interactuar, pensar con bombillas, teclear código en sus puestos y levantarse para colaborar con bocadillos de diálogo.
+
+### 4. Controles del Visualizador
+* **Arrastrar (Click + Drag):** Paneo del plano de la oficina.
+* **Rueda del Ratón (Scroll):** Zoom interactivo (0.55x a 2.2x).
+* **Click sobre un Agente:** Abre el modal de **Inspección de Agente** con su modelo de IA, estado actual y último mensaje.
+* **Barra Superior (HUD):**
+  * `Pausar / Reanudar Simulación`: Alterna la generación automática de eventos.
+  * `Siguiente Paso`: Dispara un paso individual del libreto narrativo.
+  * `Centrar Vista`: Devuelve la cámara al centro de la oficina.
+  * `Feed de Eventos`: Despliega el historial en tiempo real de eventos recibidos por WebSocket.
+
+### 5. Ejecutar Pruebas Automatizadas
+```bash
+# Ejecutar los 35 tests unitarios (server + client)
+npm test
+
+# Verificación de tipos TypeScript estricto
+npm run check:types
+
+# Compilación de producción
+npm run build
 ```
 
 ---

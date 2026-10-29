@@ -15,11 +15,12 @@
     "build:client": "npm run build --workspace=@office/client",
     "dev:server": "npm run dev --workspace=@office/server",
     "dev:client": "npm run dev --workspace=@office/client",
-    "dev": "npm run dev:server",
-    "test": "npm run test --workspace=@office/server",
+    "dev": "concurrently -k -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:client\"",
+    "test": "npm run test --workspace=@office/server && npm run test --workspace=@office/client",
     "check:types": "npm run build:shared && npm run check:types --workspace=@office/shared && npm run check:types --workspace=@office/server && npm run check:types --workspace=@office/client"
   },
   "devDependencies": {
+    "concurrently": "^10.0.6",
     "typescript": "^5.7.3"
   }
 }

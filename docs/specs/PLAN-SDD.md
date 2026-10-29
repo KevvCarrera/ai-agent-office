@@ -90,6 +90,6 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Hito 1: Scaffolding** | `SPEC-001` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
 | **Hito 2: Backend Daemon** | `SPEC-002` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
-| **Hito 3: Frontend Phaser** | `SPEC-003` | ⏳ Pendiente | Por iniciar | Por asignar | - |
-| **Hito 4: Colaboración 2D** | `SPEC-004` | ⏹️ Bloqueado por H3 | - | - | - |
-| **Hito 5: Ingesta Real** | `SPEC-005` | ⏹️ Bloqueado por H4 | - | - | - |
+| **Hito 3: Frontend Phaser** | `SPEC-003` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
+| **Hito 4: Colaboración 2D** | `SPEC-004` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
+| **Hito 5: Ingesta Real** | `SPEC-005` | ✅ Listo | Integrado en parsers | ✅ Verificado | Integrado a `main` |

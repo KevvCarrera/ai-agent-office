@@ -3,34 +3,373 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Agent Office</title>
+    <title>AI Agent Office — Visualizador 2D</title>
     <style>
       * {
         box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
       body {
         margin: 0;
         padding: 0;
-        background-color: #0f172a;
+        background-color: #0b0f19;
         overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         height: 100vh;
         width: 100vw;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: #f8fafc;
+        user-select: none;
       }
+
+      /* Contenedor del Canvas de Phaser */
       #game-container {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
+        z-index: 1;
+      }
+
+      /* Barra Superior HUD */
+      #hud-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 54px;
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 100;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      .hud-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .app-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+        color: #38bdf8;
+      }
+
+      .live-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #22c55e;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #22c55e;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+      }
+
+      .badge-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid #334155;
+      }
+
+      .btn-action {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background-color: #2563eb;
+        color: #ffffff;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+      }
+
+      .btn-action:hover {
+        background-color: #1d4ed8;
+        transform: translateY(-1px);
+      }
+
+      .btn-action:active {
+        transform: translateY(0);
+      }
+
+      .btn-secondary {
+        background-color: #334155;
+        color: #f1f5f9;
+      }
+
+      .btn-secondary:hover {
+        background-color: #475569;
+      }
+
+      /* Panel Lateral Desplegable de Eventos */
+      #event-feed-panel {
+        position: absolute;
+        top: 66px;
+        right: 16px;
+        width: 340px;
+        max-height: calc(100vh - 84px);
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(51, 65, 85, 0.8);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        z-index: 90;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgba(30, 41, 59, 0.95);
+        border-bottom: 1px solid #334155;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .panel-header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-icon {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+
+      .btn-icon:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      #event-feed-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #event-feed-list::-webkit-scrollbar {
+        width: 6px;
+      }
+      #event-feed-list::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 3px;
+      }
+
+      /* Modal Inspector de Agentes */
+      #agent-inspector-modal {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+      }
+
+      .inspector-card {
+        width: 420px;
+        background: #0f172a;
+        border: 1px solid #38bdf8;
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.2);
+        overflow: hidden;
+      }
+
+      .inspector-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+      }
+
+      .inspector-agent-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .agent-avatar-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: #ffffff;
+        box-shadow: 0 0 8px rgba(0,0,0,0.5);
+      }
+
+      .inspector-body {
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        font-size: 13px;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid #1e293b;
+        padding-bottom: 8px;
+      }
+
+      .info-label {
+        color: #94a3b8;
+      }
+
+      .info-value {
+        font-weight: 600;
+        color: #f1f5f9;
+      }
+
+      .last-message-box {
+        margin-top: 6px;
+        padding: 10px;
+        background: #1e293b;
+        border-radius: 6px;
+        border-left: 3px solid #38bdf8;
+        font-family: monospace;
+        font-size: 11px;
+        color: #cbd5e1;
+        max-height: 100px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .inspector-footer {
+        padding: 10px 18px;
+        background: #090d16;
+        text-align: right;
+        font-size: 11px;
+        color: #64748b;
       }
     </style>
   </head>
   <body>
-    <div id="game-container"></div>
+    <!-- Barra Superior HUD -->
+    <header id="hud-bar">
+      <div class="hud-section">
+        <div class="app-title">
+          <span class="live-dot"></span>
+          <span>AI AGENT OFFICE</span>
+        </div>
+        <div id="status-pill" class="badge-pill">
+          🟢 <span style="color:#4ade80;">Conectando...</span>
+        </div>
+        <div id="mode-badge" class="badge-pill">
+          🎭 <span>Simulación Mock</span>
+        </div>
+      </div>
+
+      <div class="hud-section">
+        <button id="btn-toggle-sim" class="btn-action">
+          ⏸ Pausar Simulación
+        </button>
+        <button id="btn-step-sim" class="btn-action btn-secondary">
+          ⏭ Siguiente Paso
+        </button>
+        <button id="btn-center-cam" class="btn-action btn-secondary">
+          🎯 Centrar Vista
+        </button>
+        <button id="btn-toggle-events" class="btn-action btn-secondary">
+          📋 Eventos (<span id="event-count-badge">0</span>)
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor del Juego Phaser -->
+    <main id="game-container"></main>
+
+    <!-- Panel Lateral Desplegable: Feed de Eventos -->
+    <aside id="event-feed-panel">
+      <div class="panel-header">
+        <span>⚡ Feed de Actividad en Vivo</span>
+        <div class="panel-header-actions">
+          <button id="btn-clear-events" class="btn-icon" title="Limpiar feed">🗑️</button>
+          <button id="btn-close-events" class="btn-icon" title="Ocultar feed">✖</button>
+        </div>
+      </div>
+      <div id="event-feed-list"></div>
+    </aside>
+
+    <!-- Modal Inspector de Agentes -->
+    <div id="agent-inspector-modal">
+      <div class="inspector-card">
+        <div class="inspector-header">
+          <div class="inspector-agent-info">
+            <div id="inspector-avatar-badge" class="agent-avatar-circle">A</div>
+            <div>
+              <h3 id="inspector-name" style="font-size: 15px; color: #f8fafc;">Agente</h3>
+              <p id="inspector-model" style="font-size: 11px; color: #38bdf8;">Modelo</p>
+            </div>
+          </div>
+          <button id="btn-close-inspector" class="btn-icon" style="font-size: 16px;">✖</button>
+        </div>
+        <div class="inspector-body">
+          <div class="info-row">
+            <span class="info-label">Estado Actual</span>
+            <span id="inspector-state" class="info-value">IDLE</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Archivo de Logs</span>
+            <span id="inspector-watch-target" class="info-value" style="font-family: monospace; font-size: 11px;">logs/target.jsonl</span>
+          </div>
+          <div>
+            <span class="info-label" style="display: block; margin-bottom: 4px;">Última Actividad</span>
+            <div id="inspector-last-message" class="last-message-box">Sin actividad reciente</div>
+          </div>
+        </div>
+        <div class="inspector-footer">
+          AI Agent Office — Inspector de Entidad
+        </div>
+      </div>
+    </div>
+
+    <!-- Script Principal -->
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
