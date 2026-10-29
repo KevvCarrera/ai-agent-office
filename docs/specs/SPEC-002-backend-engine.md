@@ -1,6 +1,6 @@
 # SPEC-002: Motor de Ingesta, Parsers Multi-Proveedor y WebSocket Server
 
-- **Estado:** EN PROCESO
+- **Estado:** COMPLETADO / APROBADO (LGTM)
 - **Responsables:**
   - **Orchestrator:** Diseño de SPEC y supervisión.
   - **Developer:** Implementación de parsers, watcher, mock generator y tests.
