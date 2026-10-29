@@ -1,0 +1,27 @@
+{
+  "name": "@office/server",
+  "version": "1.0.0",
+  "description": "Backend daemon para ai-agent-office",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "check:types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@office/shared": "*",
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

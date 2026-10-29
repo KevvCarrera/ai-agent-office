@@ -1,0 +1,24 @@
+{
+  "name": "ai-agent-office-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Visualizador 2D en tiempo real para agentes autónomos de IA",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=@office/shared && npm run build --workspace=@office/server && npm run build --workspace=@office/client",
+    "build:shared": "npm run build --workspace=@office/shared",
+    "build:server": "npm run build --workspace=@office/server",
+    "build:client": "npm run build --workspace=@office/client",
+    "dev:server": "npm run dev --workspace=@office/server",
+    "dev:client": "npm run dev --workspace=@office/client",
+    "dev": "npm run dev:server",
+    "check:types": "npm run build:shared && npm run check:types --workspace=@office/shared && npm run check:types --workspace=@office/server && npm run check:types --workspace=@office/client"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

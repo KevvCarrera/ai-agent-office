@@ -1,0 +1,21 @@
+{
+  "name": "@office/client",
+  "version": "1.0.0",
+  "description": "Visualizador web 2D con Phaser.js 3 para ai-agent-office",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check:types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@office/shared": "*",
+    "phaser": "^3.88.2",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0"
+  }
+}

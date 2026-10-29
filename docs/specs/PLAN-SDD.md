@@ -88,8 +88,8 @@ sequenceDiagram
 
 | Hito | Espec | Estado | Developer | Reviewer | Commit / Merge |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Hito 1: Scaffolding** | `SPEC-001` | ⏳ Pendiente | Por iniciar | Por asignar | - |
-| **Hito 2: Backend Daemon** | `SPEC-002` | ⏹️ Bloqueado por H1 | - | - | - |
+| **Hito 1: Scaffolding** | `SPEC-001` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
+| **Hito 2: Backend Daemon** | `SPEC-002` | ⏳ Pendiente | Por iniciar | Por asignar | - |
 | **Hito 3: Frontend Phaser** | `SPEC-003` | ⏹️ Bloqueado por H2 | - | - | - |
 | **Hito 4: Colaboración 2D** | `SPEC-004` | ⏹️ Bloqueado por H3 | - | - | - |
 | **Hito 5: Ingesta Real** | `SPEC-005` | ⏹️ Bloqueado por H4 | - | - | - |
