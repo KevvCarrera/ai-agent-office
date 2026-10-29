@@ -1,17 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { SocketClient } from "../src/network/socketClient.js";
 import type { OfficeConfig, OfficeEvent } from "@office/shared";
 
 describe("SocketClient unit tests", () => {
+  let client: SocketClient | null = null;
+
+  afterEach(() => {
+    if (client) {
+      client.disconnect();
+      client = null;
+    }
+  });
+
   it("initializes disconnected by default in headless test environment", () => {
-    const client = new SocketClient();
+    client = new SocketClient({ autoConnect: false });
     expect(typeof client.isConnected).toBe("function");
     expect(client.getConfig()).toBeNull();
     expect(client.isSimulationRunning()).toBe(false);
   });
 
   it("handles event listener registration and unregistration cleanly", () => {
-    const client = new SocketClient();
+    client = new SocketClient({ autoConnect: false });
     const mockCallback = vi.fn();
 
     const unsubscribe = client.onEvent(mockCallback);
@@ -21,7 +30,7 @@ describe("SocketClient unit tests", () => {
   });
 
   it("notifies config listeners when config is received", () => {
-    const client = new SocketClient();
+    client = new SocketClient({ autoConnect: false });
     const configCb = vi.fn();
 
     client.onConfig(configCb);
@@ -41,7 +50,7 @@ describe("SocketClient unit tests", () => {
   });
 
   it("updates agent state map on incoming events", () => {
-    const client = new SocketClient();
+    client = new SocketClient({ autoConnect: false });
     const eventCb = vi.fn();
     client.onEvent(eventCb);
 

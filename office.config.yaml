@@ -9,16 +9,16 @@ settings:
 
 offices:
   - id: "architecture_room"
-    name: "Sala de Arquitectura"
-    desk_coords: { x: 4, y: 3 }
+    name: "Ala Oeste — Sala de Arquitectura"
+    desk_coords: { x: -5, y: 0 }
     assigned_agent: "architect"
   - id: "dev_lab"
-    name: "Despacho Backend"
-    desk_coords: { x: 10, y: 3 }
+    name: "Ala Norte — Despacho Backend"
+    desk_coords: { x: 0, y: -5 }
     assigned_agent: "backend-developer"
   - id: "qa_office"
-    name: "Mesa de QA & Verificación"
-    desk_coords: { x: 7, y: 8 }
+    name: "Ala Este — Mesa de QA & Verificación"
+    desk_coords: { x: 5, y: 0 }
     assigned_agent: "qa-engineer"
 
 agents:

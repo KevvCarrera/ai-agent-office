@@ -12,13 +12,13 @@ export class BootScene extends Phaser.Scene {
     this.generateCharacters();
     this.generateIconsAndBadges();
 
-    // Iniciar la escena principal de la oficina
+    // Iniciar la escena principal de la oficina y la UI
     this.scene.start("OfficeScene");
     this.scene.start("UIScene");
   }
 
   /**
-   * Helper para crear un CanvasTexture en Phaser con pixel art nítido
+   * Helper para crear un CanvasTexture en Phaser con gráficos nítidos
    */
   private makeTexture(
     key: string,
@@ -34,420 +34,870 @@ export class BootScene extends Phaser.Scene {
       throw new Error(`Failed to create canvas texture: ${key}`);
     }
     const ctx = canvasTex.getContext();
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
     drawFn(ctx);
     canvasTex.refresh();
     return canvasTex;
   }
 
   /**
-   * Texturas de baldosas de suelos y alfombras para oficinas
+   * Dibuja un rombo isométrico base 2:1 dentro de un rectángulo
+   */
+  private drawIsoDiamond(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    fillStyle: string | CanvasGradient,
+    strokeStyle?: string,
+    strokeWidth = 1
+  ): void {
+    const halfW = w / 2;
+    const halfH = h / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(halfW, 0);
+    ctx.lineTo(w, halfH);
+    ctx.lineTo(halfW, h);
+    ctx.lineTo(0, halfH);
+    ctx.closePath();
+
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+
+    if (strokeStyle) {
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = strokeStyle;
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * 1. Baldosas de suelo en diamante: parquet cálido, hormigón pulido y alfombras
    */
   private generateFloorsAndTiles(): void {
-    const tileSize = 48;
+    const tileW = 64;
+    const tileH = 32;
 
-    // 1. Suelo de Parquet de Madera Cálida (Pasillos / Zonas Comunes)
-    this.makeTexture("floor_parquet", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#8d5b36";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 1. Parquet Cálido de Madera en Diamante (Zonas de loft / abiertas)
+    this.makeTexture("iso_floor_parquet", tileW, tileH, (ctx) => {
+      // Fondo base de madera
+      this.drawIsoDiamond(ctx, tileW, tileH, "#8d5b36", "#5a361c", 1);
 
-      // Tablas de madera
-      const plankHeight = 12;
-      for (let y = 0; y < tileSize; y += plankHeight) {
-        // Línea divisoria horizontal
-        ctx.fillStyle = "#633d20";
-        ctx.fillRect(0, y, tileSize, 1);
+      // Líneas de tablas en ángulo isométrico
+      ctx.strokeStyle = "rgba(74, 43, 20, 0.6)";
+      ctx.lineWidth = 1;
 
-        // Vetas de madera
-        ctx.fillStyle = "#9f693e";
-        ctx.fillRect(4, y + 2, 20, 2);
-        ctx.fillRect(28, y + 6, 16, 2);
+      // Tablas diagonales paralelas a los ejes isométricos
+      ctx.beginPath();
+      ctx.moveTo(16, 8);
+      ctx.lineTo(48, 24);
+      ctx.moveTo(48, 8);
+      ctx.lineTo(16, 24);
+      ctx.stroke();
 
-        // Línea vertical entre tablas alternas
-        const offset = (y / plankHeight) % 2 === 0 ? 24 : 12;
-        ctx.fillStyle = "#633d20";
-        ctx.fillRect(offset, y, 1, plankHeight);
-      }
+      // Vetas de madera sutiles y reflejo cálido
+      ctx.fillStyle = "rgba(180, 83, 9, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(32, 2);
+      ctx.lineTo(44, 8);
+      ctx.lineTo(32, 14);
+      ctx.lineTo(20, 8);
+      ctx.closePath();
+      ctx.fill();
     });
 
-    // 2. Baldosa moderna de oficina (Gris tecnológico)
-    this.makeTexture("floor_tile_hall", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 2. Hormigón Pulido Gris Tecnológico (Pasillos y vías de circulación)
+    this.makeTexture("iso_floor_concrete", tileW, tileH, (ctx) => {
+      // Base slate grey
+      this.drawIsoDiamond(ctx, tileW, tileH, "#1e293b", "#0f172a", 1);
 
-      // Borde de la baldosa (junta)
-      ctx.fillStyle = "#0f172a";
-      ctx.strokeRect(0.5, 0.5, tileSize - 1, tileSize - 1);
+      // Bisel de luz tenue en borde superior izquierdo
+      ctx.strokeStyle = "rgba(71, 85, 105, 0.4)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, tileH / 2);
+      ctx.lineTo(tileW / 2, 0);
+      ctx.lineTo(tileW, tileH / 2);
+      ctx.stroke();
 
-      // Efecto speckle / micropuntos de terrazo
+      // Micropuntos de terrazo
       ctx.fillStyle = "#334155";
-      ctx.fillRect(8, 8, 2, 2);
-      ctx.fillRect(24, 18, 2, 2);
-      ctx.fillRect(38, 12, 2, 2);
-      ctx.fillRect(14, 34, 2, 2);
-      ctx.fillRect(34, 38, 2, 2);
+      ctx.fillRect(18, 12, 2, 2);
+      ctx.fillRect(42, 10, 2, 2);
+      ctx.fillRect(28, 20, 2, 2);
+      ctx.fillRect(36, 22, 2, 2);
     });
 
-    // 3. Alfombra Azul (Sala de Arquitectura)
-    this.makeTexture("carpet_blue", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#1e3a8a";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 3. Alfombra Hub Central (Mesa de Reuniones / Lounge Central)
+    this.makeTexture("iso_carpet_hub", tileW, tileH, (ctx) => {
+      // Fondo azul oscuro profundo
+      this.drawIsoDiamond(ctx, tileW, tileH, "#0f172a", "#1e293b", 1);
 
-      // Borde de costura
-      ctx.fillStyle = "#172554";
-      ctx.strokeRect(1, 1, tileSize - 2, tileSize - 2);
+      // Marco interior con resplandor cian
+      ctx.save();
+      ctx.translate(tileW / 2, tileH / 2);
+      ctx.scale(0.8, 0.8);
+      ctx.translate(-tileW / 2, -tileH / 2);
+      this.drawIsoDiamond(ctx, tileW, tileH, "rgba(56, 189, 248, 0.08)", "rgba(56, 189, 248, 0.4)", 1.5);
+      ctx.restore();
 
-      // Patrón de tejido cruzado
-      ctx.fillStyle = "#2563eb";
-      for (let x = 4; x < tileSize; x += 8) {
-        for (let y = 4; y < tileSize; y += 8) {
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
+      // Detalle de costura cruzada central
+      ctx.fillStyle = "rgba(56, 189, 248, 0.3)";
+      ctx.fillRect(tileW / 2 - 2, tileH / 2 - 2, 4, 4);
     });
 
-    // 4. Alfombra Verde Esmeralda (Despacho Backend)
-    this.makeTexture("carpet_green", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#064e3b";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 4. Alfombra Ámbar (Ala Arquitecto / Claude)
+    this.makeTexture("iso_carpet_amber", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#451a03", "#78350f", 1);
 
-      ctx.fillStyle = "#022c22";
-      ctx.strokeRect(1, 1, tileSize - 2, tileSize - 2);
-
-      ctx.fillStyle = "#059669";
-      for (let x = 4; x < tileSize; x += 8) {
-        for (let y = 4; y < tileSize; y += 8) {
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
+      ctx.save();
+      ctx.translate(tileW / 2, tileH / 2);
+      ctx.scale(0.78, 0.78);
+      ctx.translate(-tileW / 2, -tileH / 2);
+      this.drawIsoDiamond(ctx, tileW, tileH, "rgba(217, 119, 6, 0.15)", "rgba(245, 158, 11, 0.5)", 1);
+      ctx.restore();
     });
 
-    // 5. Alfombra Púrpura (Mesa de QA & Verificación)
-    this.makeTexture("carpet_purple", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#4c1d95";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 5. Alfombra Cian / Azul (Ala Backend / Gemini)
+    this.makeTexture("iso_carpet_cyan", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#042f2e", "#0f766e", 1);
 
-      ctx.fillStyle = "#2e1065";
-      ctx.strokeRect(1, 1, tileSize - 2, tileSize - 2);
-
-      ctx.fillStyle = "#7c3aed";
-      for (let x = 4; x < tileSize; x += 8) {
-        for (let y = 4; y < tileSize; y += 8) {
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
+      ctx.save();
+      ctx.translate(tileW / 2, tileH / 2);
+      ctx.scale(0.78, 0.78);
+      ctx.translate(-tileW / 2, -tileH / 2);
+      this.drawIsoDiamond(ctx, tileW, tileH, "rgba(20, 184, 166, 0.15)", "rgba(45, 212, 191, 0.5)", 1);
+      ctx.restore();
     });
 
-    // 6. Alfombra Ámbar (Área común / Descanso)
-    this.makeTexture("carpet_amber", tileSize, tileSize, (ctx) => {
-      ctx.fillStyle = "#78350f";
-      ctx.fillRect(0, 0, tileSize, tileSize);
+    // 6. Alfombra Esmeralda / Púrpura (Ala QA / OpenCode)
+    this.makeTexture("iso_carpet_emerald", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#022c22", "#065f46", 1);
 
-      ctx.fillStyle = "#451a03";
-      ctx.strokeRect(1, 1, tileSize - 2, tileSize - 2);
+      ctx.save();
+      ctx.translate(tileW / 2, tileH / 2);
+      ctx.scale(0.78, 0.78);
+      ctx.translate(-tileW / 2, -tileH / 2);
+      this.drawIsoDiamond(ctx, tileW, tileH, "rgba(16, 185, 129, 0.15)", "rgba(52, 211, 153, 0.5)", 1);
+      ctx.restore();
+    });
 
-      ctx.fillStyle = "#d97706";
-      for (let x = 4; x < tileSize; x += 8) {
-        for (let y = 4; y < tileSize; y += 8) {
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
+    // Fallbacks para compatibilidad con entidades previas si las invocan
+    this.makeTexture("floor_parquet", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#8d5b36", "#5a361c");
+    });
+    this.makeTexture("floor_tile_hall", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#1e293b", "#0f172a");
+    });
+    this.makeTexture("carpet_blue", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#042f2e", "#0f766e");
+    });
+    this.makeTexture("carpet_green", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#022c22", "#065f46");
+    });
+    this.makeTexture("carpet_purple", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#3b0764", "#7c3aed");
+    });
+    this.makeTexture("carpet_amber", tileW, tileH, (ctx) => {
+      this.drawIsoDiamond(ctx, tileW, tileH, "#451a03", "#78350f");
     });
   }
 
   /**
-   * Muros, separadores de cristal y puertas
+   * 2. Mamparas divisorias de cristal translúcido en ángulo isométrico y muros
    */
   private generateWallsAndDividers(): void {
-    const tileSize = 48;
+    // 1. Mampara de cristal translúcido en ángulo isométrico (Eje X / Derecha-Abajo: 64x44)
+    this.makeTexture("iso_glass_divider_right", 64, 44, (ctx) => {
+      // Cristal translúcido con tinte azulado
+      ctx.fillStyle = "rgba(148, 163, 184, 0.22)";
+      ctx.beginPath();
+      ctx.moveTo(0, 16);
+      ctx.lineTo(32, 32);
+      ctx.lineTo(64, 16);
+      ctx.lineTo(64, 4);
+      ctx.lineTo(32, 20);
+      ctx.lineTo(0, 4);
+      ctx.closePath();
+      ctx.fill();
 
-    // Muro exterior sólido (arriba)
-    this.makeTexture("wall_solid_h", tileSize, 24, (ctx) => {
-      // Borde superior biselado
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(0, 0, tileSize, 6);
-      // Cara del muro
+      // Marco de aluminio anodizado superior
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 4);
+      ctx.lineTo(32, 20);
+      ctx.lineTo(64, 4);
+      ctx.stroke();
+
+      // Marco inferior
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 16);
+      ctx.lineTo(32, 32);
+      ctx.lineTo(64, 16);
+      ctx.stroke();
+
+      // Postes verticales de acero
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 4);
+      ctx.lineTo(0, 16);
+      ctx.moveTo(32, 20);
+      ctx.lineTo(32, 32);
+      ctx.moveTo(64, 4);
+      ctx.lineTo(64, 16);
+      ctx.stroke();
+
+      // Reflejos diagonales de cristal
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(10, 8);
+      ctx.lineTo(24, 24);
+      ctx.moveTo(42, 10);
+      ctx.lineTo(54, 20);
+      ctx.stroke();
+    });
+
+    // 2. Mampara de cristal en ángulo isométrico inverso (Eje Y / Izquierda-Abajo: 64x44)
+    this.makeTexture("iso_glass_divider_left", 64, 44, (ctx) => {
+      ctx.fillStyle = "rgba(148, 163, 184, 0.22)";
+      ctx.beginPath();
+      ctx.moveTo(0, 16);
+      ctx.lineTo(32, 0);
+      ctx.lineTo(64, 16);
+      ctx.lineTo(64, 28);
+      ctx.lineTo(32, 12);
+      ctx.lineTo(0, 28);
+      ctx.closePath();
+      ctx.fill();
+
+      // Marco superior
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 16);
+      ctx.lineTo(32, 0);
+      ctx.lineTo(64, 16);
+      ctx.stroke();
+
+      // Marco inferior
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 28);
+      ctx.lineTo(32, 12);
+      ctx.lineTo(64, 28);
+      ctx.stroke();
+
+      // Reflejos diagonales
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(14, 18);
+      ctx.lineTo(26, 8);
+      ctx.moveTo(38, 14);
+      ctx.lineTo(50, 22);
+      ctx.stroke();
+    });
+
+    // 3. Columna Loft de Acero y Remaches (16x54)
+    this.makeTexture("iso_loft_pillar", 16, 54, (ctx) => {
+      // Cuerpo columna acero carbón
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 6, tileSize, 18);
-      // Rodapié inferior
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 20, tileSize, 4);
-      // Reflejos
+      ctx.fillRect(0, 0, 16, 54);
+
+      // Borde de luz
       ctx.fillStyle = "#475569";
-      ctx.fillRect(2, 2, tileSize - 4, 2);
-    });
+      ctx.fillRect(0, 0, 3, 54);
 
-    // Muro vertical
-    this.makeTexture("wall_solid_v", 16, tileSize, (ctx) => {
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, 16, tileSize);
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(0, 0, 4, tileSize);
+      // Sombra lateral
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(14, 0, 2, tileSize);
-    });
+      ctx.fillRect(13, 0, 3, 54);
 
-    // Separador de cristal translúcido horizontal
-    this.makeTexture("divider_glass_h", tileSize, 16, (ctx) => {
-      // Vidrio translúcido
-      ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
-      ctx.fillRect(0, 2, tileSize, 10);
-      // Marco de aluminio anodizado
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(0, 0, tileSize, 2);
-      ctx.fillRect(0, 12, tileSize, 4);
-      // Destellos del cristal
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.fillRect(8, 4, 12, 1);
-      ctx.fillRect(28, 6, 8, 1);
-    });
-
-    // Separador de cristal vertical
-    this.makeTexture("divider_glass_v", 12, tileSize, (ctx) => {
-      ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
-      ctx.fillRect(2, 0, 8, tileSize);
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(0, 0, 2, tileSize);
-      ctx.fillRect(10, 0, 2, tileSize);
-    });
-
-    // Felpudo / Puerta de entrada
-    this.makeTexture("door_mat", 40, 20, (ctx) => {
-      ctx.fillStyle = "#374151";
-      ctx.fillRect(0, 0, 40, 20);
-      ctx.fillStyle = "#6b7280";
-      ctx.strokeRect(1, 1, 38, 18);
-      // Líneas estriadas
-      ctx.fillStyle = "#1f2937";
-      for (let y = 4; y < 18; y += 3) {
-        ctx.fillRect(4, y, 32, 1);
+      // Remaches
+      ctx.fillStyle = "#94a3b8";
+      for (let y = 6; y < 50; y += 12) {
+        ctx.fillRect(5, y, 2, 2);
+        ctx.fillRect(9, y, 2, 2);
       }
+
+      // Tira LED vertical cian
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(7, 10, 2, 34);
+    });
+
+    // Fallbacks
+    this.makeTexture("wall_solid_h", 64, 24, (ctx) => {
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(0, 0, 64, 24);
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(0, 0, 64, 4);
+    });
+    this.makeTexture("wall_solid_v", 16, 48, (ctx) => {
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(0, 0, 16, 48);
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(0, 0, 4, 48);
+    });
+    this.makeTexture("divider_glass_h", 64, 24, (ctx) => {
+      ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
+      ctx.fillRect(0, 4, 64, 16);
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(0, 0, 64, 3);
+      ctx.fillRect(0, 20, 64, 4);
+    });
+    this.makeTexture("divider_glass_v", 16, 48, (ctx) => {
+      ctx.fillStyle = "rgba(148, 163, 184, 0.35)";
+      ctx.fillRect(4, 0, 8, 48);
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(2, 0, 2, 48);
+      ctx.fillRect(12, 0, 2, 48);
+    });
+    this.makeTexture("door_mat", 48, 24, (ctx) => {
+      this.drawIsoDiamond(ctx, 48, 24, "#334155", "#64748b", 1);
     });
   }
 
   /**
-   * Mobiliario detallado (escritorios, monitores, sillas, tazas, plantas)
+   * 3. Mobiliario en 2.5D: Escritorios esquineros, Monitores ultrawide, Gran mesa ovalada Hub, Pizarra interactiva, etc.
    */
   private generateFurniture(): void {
-    // 1. Escritorio de Oficina en Madera (72x48 px)
-    this.makeTexture("desk_wood", 72, 48, (ctx) => {
-      // Sombra proyectada
-      ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-      ctx.fillRect(2, 6, 70, 42);
+    // 1. Escritorio Esquinero Isométrico 2.5D (72x48)
+    this.makeTexture("iso_desk_wood", 72, 48, (ctx) => {
+      // Sombra en el suelo
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(36, 40, 32, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Tablero principal
-      ctx.fillStyle = "#b45309";
-      ctx.fillRect(0, 0, 68, 40);
+      // Patas de acero cepillado
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(10, 22, 3, 18);
+      ctx.fillRect(59, 22, 3, 18);
+      ctx.fillRect(35, 26, 3, 16);
 
-      // Borde de madera oscura
+      // Grosor del tablero (bisel 3D)
       ctx.fillStyle = "#78350f";
-      ctx.strokeRect(0, 0, 68, 40);
+      ctx.beginPath();
+      ctx.moveTo(8, 18);
+      ctx.lineTo(36, 32);
+      ctx.lineTo(64, 18);
+      ctx.lineTo(64, 22);
+      ctx.lineTo(36, 36);
+      ctx.lineTo(8, 22);
+      ctx.closePath();
+      ctx.fill();
 
-      // Bisel de luz superior
-      ctx.fillStyle = "#d97706";
-      ctx.fillRect(1, 1, 66, 3);
+      // Superficie de madera de roble cálido
+      ctx.fillStyle = "#b45309";
+      ctx.beginPath();
+      ctx.moveTo(8, 18);
+      ctx.lineTo(36, 4);
+      ctx.lineTo(64, 18);
+      ctx.lineTo(36, 32);
+      ctx.closePath();
+      ctx.fill();
 
-      // Tapete de escritorio de cuero antracita
+      // Borde pulido de la madera
+      ctx.strokeStyle = "#d97706";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Tapete de escritorio de cuero antracita en ángulo
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(14, 8, 40, 24);
-      ctx.fillStyle = "#334155";
-      ctx.strokeRect(14, 8, 40, 24);
+      ctx.beginPath();
+      ctx.moveTo(22, 18);
+      ctx.lineTo(36, 11);
+      ctx.lineTo(50, 18);
+      ctx.lineTo(36, 25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
 
-      // Ranura para cables
+      // Pasacables metálico
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(32, 3, 4, 3);
+      ctx.beginPath();
+      ctx.arc(36, 9, 2, 0, Math.PI * 2);
+      ctx.fill();
     });
 
-    // 2. Monitor Apagado / Reposo (IDLE)
-    this.makeTexture("monitor_idle", 32, 24, (ctx) => {
-      // Base y peana
+    // 2. Monitor Curvo Ultrawide 34" en Ángulo Isométrico (Reposo / IDLE) (40x32)
+    this.makeTexture("iso_monitor_ultrawide_idle", 40, 32, (ctx) => {
+      // Base metálica
       ctx.fillStyle = "#475569";
-      ctx.fillRect(12, 18, 8, 4);
-      ctx.fillRect(14, 14, 4, 4);
+      ctx.beginPath();
+      ctx.moveTo(14, 26);
+      ctx.lineTo(26, 26);
+      ctx.lineTo(20, 22);
+      ctx.closePath();
+      ctx.fill();
 
-      // Marco del monitor
+      // Soporte articulado
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(19, 14, 3, 9);
+
+      // Marco curvo del monitor ultrawide
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(2, 2, 28, 14);
+      ctx.beginPath();
+      ctx.ellipse(20, 11, 18, 9, -0.15, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Pantalla en reposo (azul oscuro tenue con logo de espera)
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(4, 4, 24, 10);
-
-      // Línea de espera sutil
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(12, 8, 8, 2);
-    });
-
-    // 3. Monitor con Código Activo (TYPING)
-    this.makeTexture("monitor_code", 32, 24, (ctx) => {
-      // Base
-      ctx.fillStyle = "#475569";
-      ctx.fillRect(12, 18, 8, 4);
-      ctx.fillRect(14, 14, 4, 4);
-
-      // Marco
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(2, 2, 28, 14);
-
-      // Pantalla activa (negro VSCode)
+      // Pantalla activa oscura con logo de espera
       ctx.fillStyle = "#090d16";
-      ctx.fillRect(4, 4, 24, 10);
+      ctx.beginPath();
+      ctx.ellipse(20, 11, 16, 7.5, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glow azul suave de reposo
+      ctx.fillStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.beginPath();
+      ctx.arc(20, 11, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 3. Monitor Curvo Ultrawide con Código Activo Brillante (TYPING) (40x32)
+    this.makeTexture("iso_monitor_ultrawide_code", 40, 32, (ctx) => {
+      // Base y soporte
+      ctx.fillStyle = "#475569";
+      ctx.beginPath();
+      ctx.moveTo(14, 26);
+      ctx.lineTo(26, 26);
+      ctx.lineTo(20, 22);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(19, 14, 3, 9);
+
+      // Marco curvo
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.ellipse(20, 11, 18, 9, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pantalla VSCode
+      ctx.fillStyle = "#090d16";
+      ctx.beginPath();
+      ctx.ellipse(20, 11, 16, 7.5, -0.15, 0, Math.PI * 2);
+      ctx.fill();
 
       // Líneas de código coloreadas (sintaxis)
       ctx.fillStyle = "#38bdf8"; // azul
-      ctx.fillRect(6, 6, 6, 1);
-      ctx.fillStyle = "#a855f7"; // morado
-      ctx.fillRect(14, 6, 8, 1);
+      ctx.fillRect(9, 7, 7, 1);
+      ctx.fillStyle = "#c084fc"; // violeta
+      ctx.fillRect(17, 7, 5, 1);
 
       ctx.fillStyle = "#4ade80"; // verde
-      ctx.fillRect(6, 8, 10, 1);
+      ctx.fillRect(8, 9, 10, 1);
       ctx.fillStyle = "#facc15"; // amarillo
-      ctx.fillRect(18, 8, 6, 1);
+      ctx.fillRect(19, 9, 6, 1);
 
-      ctx.fillStyle = "#f43f5e"; // rojo/rosa
-      ctx.fillRect(6, 10, 8, 1);
+      ctx.fillStyle = "#f43f5e"; // rosa/rojo
+      ctx.fillRect(10, 11, 8, 1);
       ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(16, 10, 8, 1);
+      ctx.fillRect(19, 11, 9, 1);
+
+      ctx.fillStyle = "#34d399";
+      ctx.fillRect(11, 13, 11, 1);
+
+      // Resplandor del monitor
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
 
-    // 4. Silla Ergonómica de Oficina
-    this.makeTexture("office_chair", 32, 32, (ctx) => {
-      // Ruedas / base 5 puntas
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(10, 24, 12, 3);
-      ctx.fillRect(14, 20, 4, 5);
+    // 4. Gran Mesa Ovalada de Conferencias para el Hub Central (140x70)
+    this.makeTexture("iso_meeting_table", 140, 70, (ctx) => {
+      // Sombra proyectada
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.beginPath();
+      ctx.ellipse(70, 50, 60, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Asiento acolchado
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(6, 14, 20, 8);
+      // Patas cilíndricas de acero cepillado
       ctx.fillStyle = "#475569";
-      ctx.fillRect(7, 15, 18, 3);
+      ctx.fillRect(26, 30, 8, 18);
+      ctx.fillRect(106, 30, 8, 18);
+      ctx.fillRect(66, 32, 8, 16);
 
-      // Respaldo de malla
+      // Grosor / canto de la mesa (3D bevel)
+      ctx.fillStyle = "#3e2723";
+      ctx.beginPath();
+      ctx.ellipse(70, 31, 56, 21, 0, 0, Math.PI);
+      ctx.fill();
+
+      // Superficie elíptica en perspectiva de nogal oscuro
+      ctx.fillStyle = "#5d4037";
+      ctx.beginPath();
+      ctx.ellipse(70, 26, 56, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Borde con bisel cálido
+      ctx.strokeStyle = "#8d6e63";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Canaleta central de conexiones tecnológicas (centro de mesa)
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(8, 4, 16, 10);
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(10, 6, 12, 6);
-
-      // Reposabrazos
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(4, 12, 3, 8);
-      ctx.fillRect(25, 12, 3, 8);
-    });
-
-    // 5. Taza de Café Humeante
-    this.makeTexture("coffee_cup", 16, 16, (ctx) => {
-      // Plato
-      ctx.fillStyle = "#94a3b8";
-      ctx.fillRect(2, 12, 12, 2);
-
-      // Taza
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(4, 6, 8, 6);
-      // Asa
-      ctx.strokeRect(11.5, 7.5, 3, 3);
-
-      // Café caliente
-      ctx.fillStyle = "#451a03";
-      ctx.fillRect(5, 7, 6, 2);
-
-      // Humo
-      ctx.fillStyle = "rgba(226, 232, 240, 0.7)";
-      ctx.fillRect(6, 3, 1, 2);
-      ctx.fillRect(8, 2, 1, 2);
-      ctx.fillRect(10, 3, 1, 2);
-    });
-
-    // 6. Planta de Oficina (Monstera en maceta)
-    this.makeTexture("potted_plant", 32, 40, (ctx) => {
-      // Sombra
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
       ctx.beginPath();
-      ctx.ellipse(16, 36, 12, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(70, 26, 28, 7, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Maceta blanca moderna
-      ctx.fillStyle = "#f1f5f9";
-      ctx.beginPath();
-      ctx.moveTo(8, 24);
-      ctx.lineTo(24, 24);
-      ctx.lineTo(21, 36);
-      ctx.lineTo(11, 36);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillRect(8, 22, 16, 3);
-
-      // Hojas exuberantes
-      ctx.fillStyle = "#15803d";
-      ctx.beginPath();
-      ctx.ellipse(16, 14, 10, 9, 0, 0, Math.PI * 2);
-      ctx.fill();
-
+      // Micrófonos de conferencia / luces de estado LED
       ctx.fillStyle = "#22c55e";
       ctx.beginPath();
-      ctx.ellipse(12, 11, 7, 6, -0.2, 0, Math.PI * 2);
-      ctx.ellipse(20, 12, 7, 6, 0.2, 0, Math.PI * 2);
+      ctx.arc(58, 26, 2, 0, Math.PI * 2);
+      ctx.arc(82, 26, 2, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.fillStyle = "#4ade80";
-      ctx.fillRect(15, 8, 2, 4);
     });
 
-    // 7. Servidor Rack con LEDs parpadeantes
-    this.makeTexture("server_rack", 36, 56, (ctx) => {
+    // 5. Pizarra / Pantalla Inteligente de Reuniones (Smart Board) - IDLE (72x60)
+    this.makeTexture("iso_smartboard_idle", 72, 60, (ctx) => {
+      // Base rodante en trípode / peana
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.moveTo(24, 56);
+      ctx.lineTo(48, 56);
+      ctx.lineTo(36, 48);
+      ctx.closePath();
+      ctx.fill();
+
+      // Mástil central
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(34, 34, 4, 16);
+
+      // Marco de pantalla ultradelgado
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.roundRect(8, 4, 56, 34, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Pantalla en espera con gradiente tecnológico
+      const grad = ctx.createLinearGradient(10, 6, 62, 36);
+      grad.addColorStop(0, "#090d16");
+      grad.addColorStop(1, "#172554");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(10, 6, 52, 30, 2);
+      ctx.fill();
+
+      // Texto de standby / logo Hub
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 6px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("AI AGENT HUB", 36, 17);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "5px system-ui";
+      ctx.fillText("STANDBY / READY", 36, 25);
+    });
+
+    // 6. Pizarra Inteligente ACTIVA con Diagrama de Arquitectura / Review (72x60)
+    this.makeTexture("iso_smartboard_active", 72, 60, (ctx) => {
+      // Base y soporte
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.moveTo(24, 56);
+      ctx.lineTo(48, 56);
+      ctx.lineTo(36, 48);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(34, 34, 4, 16);
+
+      // Marco
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.roundRect(8, 4, 56, 34, 4);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Pantalla iluminada
+      ctx.fillStyle = "#020617";
+      ctx.beginPath();
+      ctx.roundRect(10, 6, 52, 30, 2);
+      ctx.fill();
+
+      // Diagrama de arquitectura interactivo (Nodos y flechas)
+      // Nodo 1: Architect (Ámbar)
+      ctx.fillStyle = "#f59e0b";
+      ctx.beginPath();
+      ctx.roundRect(14, 10, 10, 7, 2);
+      ctx.fill();
+
+      // Nodo 2: Backend (Cian)
+      ctx.fillStyle = "#06b6d4";
+      ctx.beginPath();
+      ctx.roundRect(31, 10, 10, 7, 2);
+      ctx.fill();
+
+      // Nodo 3: QA (Verde esmeralda)
+      ctx.fillStyle = "#10b981";
+      ctx.beginPath();
+      ctx.roundRect(48, 10, 10, 7, 2);
+      ctx.fill();
+
+      // Flechas conectoras
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(24, 13.5);
+      ctx.lineTo(31, 13.5);
+      ctx.moveTo(41, 13.5);
+      ctx.lineTo(48, 13.5);
+      ctx.stroke();
+
+      // Caja de código / entrega abajo
+      ctx.fillStyle = "rgba(56, 189, 248, 0.2)";
+      ctx.fillRect(14, 21, 44, 12);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(14, 21, 44, 12);
+
+      ctx.fillStyle = "#4ade80";
+      ctx.font = "bold 5px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("✓ SPEC REVIEW PASS", 16, 29);
+    });
+
+    // 7. Estación de Café Lounge con Cafetera Espresso Italiana (48x44)
+    this.makeTexture("iso_coffee_station", 48, 44, (ctx) => {
+      // Sombra
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.beginPath();
+      ctx.ellipse(24, 38, 20, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mueble bar de mármol blanco
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.roundRect(8, 22, 32, 16, 2);
+      ctx.fill();
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Cafetera espresso de acero cromado
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillRect(14, 8, 20, 15);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(15, 9, 18, 3); // tapa superior
+
+      // Manómetro digital cian
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.arc(24, 13, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Portafiltros y tazas
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(17, 18, 4, 3);
+      ctx.fillRect(27, 18, 4, 3);
+
+      // Vapor sutil
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(19, 6);
+      ctx.bezierCurveTo(17, 4, 21, 2, 19, 0);
+      ctx.moveTo(29, 6);
+      ctx.bezierCurveTo(27, 4, 31, 2, 29, 0);
+      ctx.stroke();
+    });
+
+    // 8. Servidores Rack 2.5D con LEDs Parpadeantes (36x64)
+    this.makeTexture("iso_server_rack", 36, 64, (ctx) => {
+      // Sombra
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.beginPath();
+      ctx.ellipse(18, 60, 16, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gabinete de acero carbón
       ctx.fillStyle = "#090d16";
-      ctx.fillRect(0, 0, 36, 56);
-      ctx.fillStyle = "#1e293b";
-      ctx.strokeRect(1, 1, 34, 54);
+      ctx.fillRect(4, 4, 28, 54);
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(4, 4, 28, 54);
 
-      // Unidades U del rack
-      for (let y = 6; y < 50; y += 10) {
-        ctx.fillStyle = "#111827";
-        ctx.fillRect(4, y, 28, 8);
-        ctx.fillStyle = "#374151";
-        ctx.strokeRect(4, y, 28, 8);
+      // Puerta de vidrio tintado
+      ctx.fillStyle = "rgba(56, 189, 248, 0.08)";
+      ctx.fillRect(6, 6, 24, 50);
 
-        // LEDs indicadores
-        ctx.fillStyle = "#22c55e"; // verde
-        ctx.fillRect(6, y + 3, 2, 2);
-        ctx.fillStyle = "#38bdf8"; // cyan
-        ctx.fillRect(10, y + 3, 2, 2);
-        ctx.fillStyle = "#eab308"; // amarillo
-        ctx.fillRect(14, y + 3, 2, 2);
+      // Bandejas de servidores 1U y LEDs
+      for (let y = 8; y < 52; y += 9) {
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(7, y, 22, 7);
 
-        // Rejilla de ventilación
-        ctx.fillStyle = "#1f2937";
-        ctx.fillRect(18, y + 3, 12, 2);
+        // LEDs indicadores (verde, cian, ámbar)
+        ctx.fillStyle = "#22c55e";
+        ctx.fillRect(9, y + 2.5, 2, 2);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(13, y + 2.5, 2, 2);
+        ctx.fillStyle = "#eab308";
+        ctx.fillRect(17, y + 2.5, 2, 2);
+
+        // Rejilla de refrigeración
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(21, y + 2.5, 6, 2);
       }
     });
 
-    // 8. Dispensador de Agua (Water Cooler)
-    this.makeTexture("water_cooler", 24, 48, (ctx) => {
-      // Botellón azul transparente
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(6, 4, 12, 16);
-      ctx.fillStyle = "#bae6fd";
-      ctx.fillRect(8, 6, 3, 12);
+    // 9. Planta Estilizada Fiddle Leaf Fig (Higuera de hoja de violín) (36x56)
+    this.makeTexture("iso_plant_fiddle", 36, 56, (ctx) => {
+      // Sombra
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.beginPath();
+      ctx.ellipse(18, 52, 14, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Cuerpo dispensador blanco
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(4, 20, 16, 24);
-      ctx.fillStyle = "#e2e8f0";
-      ctx.strokeRect(4, 20, 16, 24);
+      // Macetero cilíndrico de terracota blanca moderna
+      ctx.fillStyle = "#f1f5f9";
+      ctx.beginPath();
+      ctx.roundRect(10, 36, 16, 16, 3);
+      ctx.fill();
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Grifo frío y caliente
-      ctx.fillStyle = "#3b82f6";
-      ctx.fillRect(7, 26, 3, 3);
-      ctx.fillStyle = "#ef4444";
-      ctx.fillRect(14, 26, 3, 3);
+      // Tierra fértil
+      ctx.fillStyle = "#3e2723";
+      ctx.beginPath();
+      ctx.ellipse(18, 38, 7, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Rejilla recoge-gotas
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(6, 32, 12, 2);
+      // Tallo principal
+      ctx.strokeStyle = "#4e342e";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(18, 38);
+      ctx.lineTo(18, 14);
+      ctx.stroke();
+
+      // Grandes hojas exuberantes
+      const drawLeaf = (lx: number, ly: number, angle: number, size: number) => {
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#15803d";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size, size * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#22c55e";
+        ctx.beginPath();
+        ctx.ellipse(-1, -1, size * 0.7, size * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      drawLeaf(14, 28, -0.4, 9);
+      drawLeaf(22, 24, 0.4, 9);
+      drawLeaf(13, 18, -0.6, 10);
+      drawLeaf(23, 16, 0.5, 10);
+      drawLeaf(18, 8, 0, 11);
     });
 
-    // 9. Sombra universal bajo los personajes
+    // 10. Silla de Oficina Ergonómica Isométrica (32x36)
+    this.makeTexture("iso_chair_desk", 32, 36, (ctx) => {
+      // Ruedas estrella 5 puntas
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(16, 28, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Columna de gas
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(15, 20, 2, 8);
+
+      // Asiento acolchado en ángulo
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.ellipse(16, 18, 10, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      // Respaldo de malla ergonómica
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.ellipse(16, 9, 8, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(56, 189, 248, 0.4)";
+      ctx.fillRect(14, 6, 4, 6);
+    });
+
+    // 11. Sombra Universal Suave 2.5D para Entidades (36x18)
+    this.makeTexture("iso_agent_shadow", 36, 18, (ctx) => {
+      const grad = ctx.createRadialGradient(18, 9, 2, 18, 9, 16);
+      grad.addColorStop(0, "rgba(0, 0, 0, 0.45)");
+      grad.addColorStop(0.6, "rgba(0, 0, 0, 0.2)");
+      grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(18, 9, 16, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Fallbacks para mobiliario plano anterior
+    this.makeTexture("desk_wood", 72, 48, (ctx) => {
+      ctx.fillStyle = "#b45309";
+      ctx.fillRect(0, 0, 72, 48);
+    });
+    this.makeTexture("monitor_idle", 32, 24, (ctx) => {
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(2, 2, 28, 14);
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(4, 4, 24, 10);
+    });
+    this.makeTexture("monitor_code", 32, 24, (ctx) => {
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(2, 2, 28, 14);
+      ctx.fillStyle = "#090d16";
+      ctx.fillRect(4, 4, 24, 10);
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(6, 6, 8, 2);
+    });
+    this.makeTexture("office_chair", 32, 32, (ctx) => {
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(6, 14, 20, 8);
+    });
+    this.makeTexture("coffee_cup", 16, 16, (ctx) => {
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(4, 6, 8, 6);
+    });
+    this.makeTexture("potted_plant", 32, 40, (ctx) => {
+      ctx.fillStyle = "#15803d";
+      ctx.beginPath();
+      ctx.arc(16, 16, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f1f5f9";
+      ctx.fillRect(10, 26, 12, 10);
+    });
+    this.makeTexture("server_rack", 36, 56, (ctx) => {
+      ctx.fillStyle = "#090d16";
+      ctx.fillRect(0, 0, 36, 56);
+    });
+    this.makeTexture("water_cooler", 24, 48, (ctx) => {
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(6, 4, 12, 16);
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(4, 20, 16, 24);
+    });
     this.makeTexture("agent_shadow", 32, 14, (ctx) => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
       ctx.beginPath();
@@ -457,7 +907,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   /**
-   * Generación de personajes para cada agente con paletas distintivas
+   * 4. Sprites de Personajes en Perspectiva Isométrica 2.5D con Poses Orientadas
    */
   private generateCharacters(): void {
     const palettes: Record<
@@ -471,357 +921,344 @@ export class BootScene extends Phaser.Scene {
       }
     > = {
       avatar_blue: {
-        hair: "#1e293b",
+        hair: "#0f172a",
         skin: "#fed7aa",
-        shirt: "#2563eb", // Azul intenso (Architect)
+        shirt: "#2563eb", // Azul / Ámbar (Architect Claude)
         pants: "#1e293b",
-        accent: "#60a5fa"
+        accent: "#f59e0b"
       },
       avatar_green: {
         hair: "#78350f",
         skin: "#fde047",
-        shirt: "#059669", // Verde esmeralda (Backend)
-        pants: "#334155",
-        accent: "#34d399"
+        shirt: "#0d9488", // Cian / Teal (Backend Gemini)
+        pants: "#1e293b",
+        accent: "#22d3ee"
       },
       avatar_purple: {
-        hair: "#581c87",
+        hair: "#4c1d95",
         skin: "#ffedd5",
-        shirt: "#7c3aed", // Púrpura (QA)
+        shirt: "#7c3aed", // Púrpura (QA Engineer)
         pants: "#111827",
-        accent: "#c084fc"
+        accent: "#a855f7"
       },
       avatar_gold: {
         hair: "#18181b",
         skin: "#fbcfe8",
-        shirt: "#d97706", // Dorado (OpenCode)
-        pants: "#27272a",
-        accent: "#fbbf24"
-      },
-      avatar_red: {
-        hair: "#312e81",
-        skin: "#fef08a",
-        shirt: "#dc2626", // Rojo (DevOps/Seguridad)
-        pants: "#1e1e24",
-        accent: "#f87171"
+        shirt: "#059669", // Esmeralda / Oro (OpenCode)
+        pants: "#1e293b",
+        accent: "#10b981"
       }
     };
 
-    const width = 32;
-    const height = 48;
+    const width = 36;
+    const height = 52;
 
     Object.entries(palettes).forEach(([key, p]) => {
-      // 1. Estado Sentado (Mirando al frente hacia el monitor)
-      this.makeTexture(`${key}_sit`, width, height, (ctx) => {
-        // Cabeza
+      // 1. Sentado en ángulo isométrico frente a monitor (ISO SIT)
+      this.makeTexture(`${key}_iso_sit`, width, height, (ctx) => {
+        // Cabeza en 3/4
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 8, 16, 12);
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 12, 12, 10);
+        ctx.beginPath();
+        ctx.ellipse(18, 12, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Ojos
+        ctx.fillStyle = p.skin;
+        ctx.beginPath();
+        ctx.ellipse(19, 14, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ojos orientados hacia abajo/derecha (al monitor)
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 16, 2, 2);
-        ctx.fillRect(18, 16, 2, 2);
+        ctx.fillRect(20, 14, 2, 2);
+        ctx.fillRect(23, 14, 2, 2);
 
-        // Torso / Camisa
+        // Torso / Camisa en 3/4
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 22, 16, 14);
+        ctx.beginPath();
+        ctx.roundRect(11, 22, 14, 15, 3);
+        ctx.fill();
 
-        // Cuello / Acento
+        // Acento / Corbata / Bufanda
         ctx.fillStyle = p.accent;
-        ctx.fillRect(14, 22, 4, 6);
+        ctx.fillRect(17, 22, 3, 7);
 
-        // Brazos hacia adelante (sobre el escritorio tecleando sutilmente)
+        // Brazos hacia el escritorio en ángulo
         ctx.fillStyle = p.skin;
-        ctx.fillRect(6, 26, 4, 8);
-        ctx.fillRect(22, 26, 4, 8);
+        ctx.fillRect(21, 28, 8, 4);
 
         // Piernas sentadas
         ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 36, 16, 8);
+        ctx.fillRect(12, 37, 13, 8);
       });
 
-      // 2. De pie mirando hacia abajo (Frontal)
-      this.makeTexture(`${key}_stand_down`, width, height, (ctx) => {
-        // Cabeza y pelo
+      // 2. De pie en 3/4 Isométrico (ISO STAND)
+      this.makeTexture(`${key}_iso_stand`, width, height, (ctx) => {
+        // Cabeza
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 16, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 10, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 10, 12, 10);
+        ctx.beginPath();
+        ctx.ellipse(19, 12, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 14, 2, 2);
-        ctx.fillRect(18, 14, 2, 2);
+        ctx.fillRect(20, 12, 2, 2);
+        ctx.fillRect(23, 12, 2, 2);
 
         // Torso
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 20, 16, 14);
-        ctx.fillStyle = p.accent;
-        ctx.fillRect(14, 20, 4, 8);
+        ctx.beginPath();
+        ctx.roundRect(11, 19, 14, 16, 3);
+        ctx.fill();
 
-        // Brazos a los lados
+        ctx.fillStyle = p.accent;
+        ctx.fillRect(17, 19, 3, 8);
+
+        // Brazos a los lados en ángulo
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(5, 20, 3, 10);
-        ctx.fillRect(24, 20, 3, 10);
+        ctx.fillRect(8, 20, 3, 10);
+        ctx.fillRect(25, 20, 3, 10);
         ctx.fillStyle = p.skin;
-        ctx.fillRect(5, 30, 3, 4);
-        ctx.fillRect(24, 30, 3, 4);
+        ctx.fillRect(8, 30, 3, 3);
+        ctx.fillRect(25, 30, 3, 3);
 
         // Piernas
         ctx.fillStyle = p.pants;
-        ctx.fillRect(9, 34, 5, 12);
-        ctx.fillRect(18, 34, 5, 12);
+        ctx.fillRect(12, 35, 5, 12);
+        ctx.fillRect(19, 35, 5, 12);
+
         // Zapatos
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(8, 44, 6, 3);
-        ctx.fillRect(18, 44, 6, 3);
+        ctx.fillRect(11, 47, 6, 3);
+        ctx.fillRect(19, 47, 6, 3);
       });
 
-      // 3. Caminando Abajo: Frame 1
-      this.makeTexture(`${key}_walk_down_0`, width, height, (ctx) => {
+      // 3. Caminando en Diagonal Sudeste (SE) - Frame 0 y 1
+      this.makeTexture(`${key}_iso_walk_se_0`, width, height, (ctx) => {
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 16, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 10, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 10, 12, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 14, 2, 2);
-        ctx.fillRect(18, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 12, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 20, 16, 14);
-        ctx.fillStyle = p.accent;
-        ctx.fillRect(14, 20, 4, 8);
+        ctx.beginPath();
+        ctx.roundRect(11, 19, 14, 16, 3);
+        ctx.fill();
 
-        // Brazo izquierdo adelante
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(4, 22, 4, 10);
-        ctx.fillRect(24, 18, 4, 10);
-
-        // Pierna izquierda extendida
+        // Pierna adelantada
         ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 34, 6, 10);
-        ctx.fillRect(18, 34, 6, 13);
+        ctx.fillRect(11, 35, 5, 9);
+        ctx.fillRect(20, 35, 5, 13);
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(7, 42, 7, 3);
-        ctx.fillRect(18, 45, 6, 3);
+        ctx.fillRect(10, 44, 6, 3);
+        ctx.fillRect(20, 48, 6, 3);
       });
 
-      // 4. Caminando Abajo: Frame 2
-      this.makeTexture(`${key}_walk_down_1`, width, height, (ctx) => {
+      this.makeTexture(`${key}_iso_walk_se_1`, width, height, (ctx) => {
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 16, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 10, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 10, 12, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 14, 2, 2);
-        ctx.fillRect(18, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 12, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 20, 16, 14);
-        ctx.fillStyle = p.accent;
-        ctx.fillRect(14, 20, 4, 8);
+        ctx.beginPath();
+        ctx.roundRect(11, 19, 14, 16, 3);
+        ctx.fill();
 
-        // Brazo derecho adelante
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(4, 18, 4, 10);
-        ctx.fillRect(24, 22, 4, 10);
-
-        // Pierna derecha extendida
         ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 34, 6, 13);
-        ctx.fillRect(18, 34, 6, 10);
+        ctx.fillRect(11, 35, 5, 13);
+        ctx.fillRect(20, 35, 5, 9);
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(8, 45, 6, 3);
-        ctx.fillRect(17, 42, 7, 3);
+        ctx.fillRect(11, 48, 6, 3);
+        ctx.fillRect(19, 44, 6, 3);
       });
 
-      // 5. Mirando Arriba (Espaldas)
-      this.makeTexture(`${key}_stand_up`, width, height, (ctx) => {
-        // Cabello cubre la nuca
+      // 4. Caminando en Diagonal Sudoeste (SW) - Frame 0 y 1
+      this.makeTexture(`${key}_iso_walk_sw_0`, width, height, (ctx) => {
+        ctx.save();
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+        // Dibuja reflejado de SE
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 16, 14);
-
-        // Espalda
-        ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 20, 16, 14);
-        // Piernas
-        ctx.fillStyle = p.pants;
-        ctx.fillRect(9, 34, 5, 12);
-        ctx.fillRect(18, 34, 5, 12);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(9, 44, 5, 3);
-        ctx.fillRect(18, 44, 5, 3);
-      });
-
-      // 6. Caminando Lateral Izquierda
-      this.makeTexture(`${key}_walk_left_0`, width, height, (ctx) => {
-        ctx.fillStyle = p.hair;
-        ctx.fillRect(10, 6, 14, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 10, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(8, 10, 8, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(8, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 12, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(10, 20, 12, 14);
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(6, 24, 4, 8);
+        ctx.beginPath();
+        ctx.roundRect(11, 19, 14, 16, 3);
+        ctx.fill();
 
         ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 34, 6, 12);
-        ctx.fillRect(16, 34, 6, 9);
+        ctx.fillRect(11, 35, 5, 9);
+        ctx.fillRect(20, 35, 5, 13);
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(6, 44, 7, 3);
-        ctx.fillRect(16, 41, 6, 3);
+        ctx.fillRect(10, 44, 6, 3);
+        ctx.fillRect(20, 48, 6, 3);
+        ctx.restore();
       });
 
-      this.makeTexture(`${key}_walk_left_1`, width, height, (ctx) => {
+      this.makeTexture(`${key}_iso_walk_sw_1`, width, height, (ctx) => {
+        ctx.save();
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
         ctx.fillStyle = p.hair;
-        ctx.fillRect(10, 6, 14, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 10, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(8, 10, 8, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(8, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 12, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(10, 20, 12, 14);
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(12, 24, 4, 8);
+        ctx.beginPath();
+        ctx.roundRect(11, 19, 14, 16, 3);
+        ctx.fill();
 
         ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 34, 6, 9);
-        ctx.fillRect(16, 34, 6, 12);
+        ctx.fillRect(11, 35, 5, 13);
+        ctx.fillRect(20, 35, 5, 9);
         ctx.fillStyle = "#0f172a";
-        ctx.fillRect(7, 41, 6, 3);
-        ctx.fillRect(15, 44, 7, 3);
+        ctx.fillRect(11, 48, 6, 3);
+        ctx.fillRect(19, 44, 6, 3);
+        ctx.restore();
       });
 
-      // 7. Caminando Lateral Derecha
-      this.makeTexture(`${key}_walk_right_0`, width, height, (ctx) => {
+      // 5. Animación de Tecleo Activo (TYPING) en Isométrico
+      this.makeTexture(`${key}_iso_typing_0`, width, height, (ctx) => {
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 14, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 12, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(16, 10, 8, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(22, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 14, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(10, 20, 12, 14);
+        ctx.beginPath();
+        ctx.roundRect(11, 22, 14, 15, 3);
+        ctx.fill();
+
+        // Manos tecleando en diagonal (mano izquierda levantada)
         ctx.fillStyle = p.skin;
-        ctx.fillRect(22, 24, 4, 8);
+        ctx.fillRect(20, 27, 8, 3);
+        ctx.fillRect(22, 31, 7, 3);
 
         ctx.fillStyle = p.pants;
-        ctx.fillRect(10, 34, 6, 12);
-        ctx.fillRect(18, 34, 6, 9);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(11, 44, 7, 3);
-        ctx.fillRect(18, 41, 6, 3);
+        ctx.fillRect(12, 37, 13, 8);
       });
 
-      this.makeTexture(`${key}_walk_right_1`, width, height, (ctx) => {
+      this.makeTexture(`${key}_iso_typing_1`, width, height, (ctx) => {
         ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 6, 14, 12);
+        ctx.beginPath();
+        ctx.ellipse(18, 13, 8, 8, 0, 0, Math.PI * 2); // ligero cabeceo
+        ctx.fill();
         ctx.fillStyle = p.skin;
-        ctx.fillRect(16, 10, 8, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(22, 14, 2, 2);
+        ctx.beginPath();
+        ctx.ellipse(19, 15, 6, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = p.shirt;
-        ctx.fillRect(10, 20, 12, 14);
+        ctx.beginPath();
+        ctx.roundRect(11, 23, 14, 15, 3);
+        ctx.fill();
+
+        // Mano derecha levantada
         ctx.fillStyle = p.skin;
-        ctx.fillRect(14, 24, 4, 8);
+        ctx.fillRect(20, 31, 8, 3);
+        ctx.fillRect(22, 27, 7, 3);
 
         ctx.fillStyle = p.pants;
-        ctx.fillRect(10, 34, 6, 9);
-        ctx.fillRect(18, 34, 6, 12);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(10, 41, 6, 3);
-        ctx.fillRect(17, 44, 7, 3);
+        ctx.fillRect(12, 38, 13, 8);
       });
 
-      // 8. Estado Tecleando (TYPING)
-      this.makeTexture(`${key}_typing_0`, width, height, (ctx) => {
-        ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 8, 16, 12);
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 12, 12, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 16, 2, 2);
-        ctx.fillRect(18, 16, 2, 2);
-
-        ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 22, 16, 14);
-
-        // Manos tecleando rápido (mano izquierda levantada)
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(5, 23, 4, 7);
-        ctx.fillRect(23, 27, 4, 7);
-
-        ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 36, 16, 8);
-      });
-
-      this.makeTexture(`${key}_typing_1`, width, height, (ctx) => {
-        ctx.fillStyle = p.hair;
-        ctx.fillRect(8, 9, 16, 12); // ligero cabeceo
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(10, 13, 12, 10);
-        ctx.fillStyle = "#0f172a";
-        ctx.fillRect(12, 17, 2, 2);
-        ctx.fillRect(18, 17, 2, 2);
-
-        ctx.fillStyle = p.shirt;
-        ctx.fillRect(8, 23, 16, 14);
-
-        // Manos tecleando rápido (mano derecha levantada)
-        ctx.fillStyle = p.skin;
-        ctx.fillRect(5, 27, 4, 7);
-        ctx.fillRect(23, 23, 4, 7);
-
-        ctx.fillStyle = p.pants;
-        ctx.fillRect(8, 37, 16, 8);
-      });
+      // Registrar también claves originales para que cualquier llamada legacy no falle
+      this.makeTexture(`${key}_sit`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_stand_down`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_stand_up`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_down_0`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_down_1`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_left_0`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_left_1`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_right_0`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_walk_right_1`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_typing_0`, width, height, (c) => this.drawFallbackAvatar(c, p));
+      this.makeTexture(`${key}_typing_1`, width, height, (c) => this.drawFallbackAvatar(c, p));
     });
   }
 
+  private drawFallbackAvatar(
+    ctx: CanvasRenderingContext2D,
+    p: { hair: string; skin: string; shirt: string; pants: string; accent: string }
+  ): void {
+    ctx.fillStyle = p.hair;
+    ctx.fillRect(10, 6, 16, 12);
+    ctx.fillStyle = p.skin;
+    ctx.fillRect(12, 10, 12, 10);
+    ctx.fillStyle = p.shirt;
+    ctx.fillRect(10, 20, 16, 14);
+    ctx.fillStyle = p.pants;
+    ctx.fillRect(11, 34, 14, 12);
+  }
+
   /**
-   * Iconos flotantes de estado y bocadillos de diálogo
+   * 5. Iconos flotantes y elementos de diálogo 2.5D
    */
   private generateIconsAndBadges(): void {
-    // 1. Icono de Pensamiento (Bombilla / Foco encendido)
-    this.makeTexture("icon_bulb", 24, 24, (ctx) => {
-      // Resplandor
-      ctx.fillStyle = "rgba(250, 204, 21, 0.4)";
+    // 1. Icono Bombilla con aura luminosa
+    this.makeTexture("icon_bulb", 28, 28, (ctx) => {
+      // Halo brillante
+      const grad = ctx.createRadialGradient(14, 11, 2, 14, 11, 13);
+      grad.addColorStop(0, "rgba(250, 204, 21, 0.9)");
+      grad.addColorStop(0.5, "rgba(250, 204, 21, 0.3)");
+      grad.addColorStop(1, "rgba(250, 204, 21, 0)");
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(12, 10, 10, 0, Math.PI * 2);
+      ctx.arc(14, 11, 13, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bulbo de cristal amarillo brillante
-      ctx.fillStyle = "#facc15";
+      // Bombilla
+      ctx.fillStyle = "#fef08a";
       ctx.beginPath();
-      ctx.arc(12, 9, 6, 0, Math.PI * 2);
+      ctx.arc(14, 10, 7, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = "#eab308";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Filamento
-      ctx.fillStyle = "#eab308";
-      ctx.fillRect(11, 7, 2, 4);
-
-      // Casquillo de rosca
+      // Casquillo
       ctx.fillStyle = "#94a3b8";
-      ctx.fillRect(10, 15, 4, 3);
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(10.5, 18, 3, 2);
+      ctx.fillRect(12, 17, 4, 4);
     });
 
-    // 2. Icono de Terminal de Código (TYPING / TOOL_CALLED)
-    this.makeTexture("icon_terminal", 28, 18, (ctx) => {
-      // Fondo negro de consola
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, 28, 18);
-      ctx.fillStyle = "#38bdf8";
-      ctx.strokeRect(0.5, 0.5, 27, 17);
+    // 2. Icono Terminal de Código
+    this.makeTexture("icon_terminal", 30, 20, (ctx) => {
+      ctx.fillStyle = "#090d16";
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 30, 20, 3);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Barra superior con botones de ventana
+      // Botones ventana
       ctx.fillStyle = "#ef4444";
       ctx.fillRect(3, 3, 2, 2);
       ctx.fillStyle = "#eab308";
@@ -829,18 +1266,18 @@ export class BootScene extends Phaser.Scene {
       ctx.fillStyle = "#22c55e";
       ctx.fillRect(11, 3, 2, 2);
 
-      // Prompt verde `>`
+      // Prompt >
       ctx.fillStyle = "#4ade80";
       ctx.fillRect(4, 9, 3, 1);
       ctx.fillRect(6, 10, 2, 1);
       ctx.fillRect(4, 11, 3, 1);
 
-      // Cursor parpadeante
+      // Cursor
       ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(10, 9, 5, 3);
+      ctx.fillRect(10, 9, 6, 3);
     });
 
-    // 3. Flecha / Cola del bocadillo de diálogo
+    // 3. Cola del bocadillo de diálogo
     this.makeTexture("bubble_tail", 16, 12, (ctx) => {
       ctx.fillStyle = "#0f172a";
       ctx.beginPath();
@@ -850,8 +1287,7 @@ export class BootScene extends Phaser.Scene {
       ctx.closePath();
       ctx.fill();
 
-      // Relleno interior
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
       ctx.beginPath();
       ctx.moveTo(2, 0);
       ctx.lineTo(14, 0);
@@ -860,26 +1296,22 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
     });
 
-    // 4. Placa de Sala de Oficina (Header Plaque)
+    // 4. Placa identificativa de salas (Glassmorphic)
     this.makeTexture("room_plaque", 160, 28, (ctx) => {
-      // Sombra
-      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-      ctx.fillRect(2, 2, 158, 26);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 160, 28, 6);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Fondo oscuro elegante
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, 156, 24);
-
-      // Borde dorado sutil
-      ctx.fillStyle = "#d97706";
-      ctx.strokeRect(0.5, 0.5, 155, 23);
-
-      // Tachuelas metálicas en las 4 esquinas
-      ctx.fillStyle = "#fbbf24";
-      ctx.fillRect(2, 2, 2, 2);
-      ctx.fillRect(152, 2, 2, 2);
-      ctx.fillRect(2, 20, 2, 2);
-      ctx.fillRect(152, 20, 2, 2);
+      // Puntos decorativos en las esquinas
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(4, 4, 2, 2);
+      ctx.fillRect(154, 4, 2, 2);
+      ctx.fillRect(4, 22, 2, 2);
+      ctx.fillRect(154, 22, 2, 2);
     });
   }
 }

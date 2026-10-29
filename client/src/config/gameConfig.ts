@@ -8,10 +8,10 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   parent: "game-container",
   width: 1200,
   height: 800,
-  backgroundColor: "#0b0f19",
+  backgroundColor: "#070b14",
   render: {
-    pixelArt: true,
-    antialias: false,
+    pixelArt: false,
+    antialias: true,
     roundPixels: true
   },
   scale: {

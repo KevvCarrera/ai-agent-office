@@ -21,8 +21,10 @@ export class SocketClient {
   private eventListeners: Array<EventListener<OfficeEvent>> = [];
   private agentsStateListeners: Array<EventListener<Record<string, AgentCurrentState>>> = [];
   private simulationStatusListeners: Array<EventListener<{ running: boolean }>> = [];
+  private options?: { autoConnect?: boolean };
 
-  constructor() {
+  constructor(options?: { autoConnect?: boolean }) {
+    this.options = options;
     this.initSocket();
   }
 
@@ -32,12 +34,14 @@ export class SocketClient {
   }
 
   private initSocket(): void {
+    const isTest = typeof process !== "undefined" && (process.env.NODE_ENV === "test" || !!process.env.VITEST);
+    const shouldDisableAutoConnect = this.options?.autoConnect === false || isTest;
     const serverUrl = this.getServerUrl();
     this.socket = io(serverUrl, {
       transports: ["websocket", "polling"],
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      autoConnect: true
+      autoConnect: !shouldDisableAutoConnect
     });
 
     this.socket.on("connect", () => {
@@ -79,6 +83,14 @@ export class SocketClient {
 
   public isConnected(): boolean {
     return this.socket?.connected ?? false;
+  }
+
+  public connect(): void {
+    this.socket?.connect();
+  }
+
+  public disconnect(): void {
+    this.socket?.disconnect();
   }
 
   public isSimulationRunning(): boolean {

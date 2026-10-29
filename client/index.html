@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Agent Office — Visualizador 2D</title>
+    <title>AI Agent Office — Silicon Valley Tech Loft 2.5D</title>
     <style>
       * {
         box-sizing: border-box;
@@ -13,7 +13,8 @@
       body {
         margin: 0;
         padding: 0;
-        background-color: #0b0f19;
+        background-color: #070b14;
+        background-image: radial-gradient(circle at 50% 50%, #0d1527 0%, #070b14 100%);
         overflow: hidden;
         height: 100vh;
         width: 100vw;
@@ -22,7 +23,7 @@
         user-select: none;
       }
 
-      /* Contenedor del Canvas de Phaser */
+      /* Contenedor del Canvas de Phaser 2.5D */
       #game-container {
         position: absolute;
         top: 0;
@@ -32,28 +33,40 @@
         z-index: 1;
       }
 
-      /* Barra Superior HUD */
-      #hud-bar {
+      /* HUD Glassmorphism: Cápsulas flotantes en las esquinas */
+      .hud-floating-capsule {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 54px;
-        background: rgba(15, 23, 42, 0.88);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid rgba(51, 65, 85, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 16px;
-        z-index: 100;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      }
-
-      .hud-section {
+        top: 16px;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+        border-radius: 12px;
+        padding: 8px 14px;
         display: flex;
         align-items: center;
         gap: 12px;
+        z-index: 100;
+        transition: all 0.2s ease;
+      }
+
+      .hud-floating-capsule:hover {
+        border-color: rgba(56, 189, 248, 0.3);
+        box-shadow: 0 10px 36px 0 rgba(0, 0, 0, 0.55), 0 0 16px rgba(56, 189, 248, 0.15);
+      }
+
+      #hud-left {
+        left: 16px;
+      }
+
+      #hud-right {
+        right: 16px;
+      }
+
+      .app-title-group {
+        display: flex;
+        flex-direction: column;
       }
 
       .app-title {
@@ -61,9 +74,18 @@
         align-items: center;
         gap: 8px;
         font-weight: 800;
-        font-size: 15px;
-        letter-spacing: 0.5px;
+        font-size: 14px;
+        letter-spacing: 0.8px;
+        color: #f8fafc;
+      }
+
+      .app-subtitle {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
         color: #38bdf8;
+        margin-left: 16px;
+        text-transform: uppercase;
       }
 
       .live-dot {
@@ -71,7 +93,7 @@
         height: 8px;
         background-color: #22c55e;
         border-radius: 50%;
-        box-shadow: 0 0 8px #22c55e;
+        box-shadow: 0 0 10px #22c55e;
         animation: pulse 2s infinite;
       }
 
@@ -87,28 +109,30 @@
         padding: 4px 10px;
         border-radius: 9999px;
         font-size: 11px;
-        background: rgba(30, 41, 59, 0.9);
-        border: 1px solid #334155;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       .btn-action {
         display: flex;
         align-items: center;
         gap: 6px;
-        background-color: #2563eb;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         color: #ffffff;
-        border: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 12px;
+        border-radius: 8px;
+        font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease-in-out;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
       }
 
       .btn-action:hover {
-        background-color: #1d4ed8;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
       }
 
       .btn-action:active {
@@ -116,31 +140,35 @@
       }
 
       .btn-secondary {
-        background-color: #334155;
+        background: rgba(30, 41, 59, 0.85);
         color: #f1f5f9;
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: none;
       }
 
       .btn-secondary:hover {
-        background-color: #475569;
+        background: rgba(51, 65, 85, 0.95);
+        border-color: rgba(56, 189, 248, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
 
-      /* Panel Lateral Desplegable de Eventos */
+      /* Panel Lateral Desplegable de Actividad */
       #event-feed-panel {
         position: absolute;
-        top: 66px;
+        top: 72px;
         right: 16px;
-        width: 340px;
-        max-height: calc(100vh - 84px);
-        background: rgba(15, 23, 42, 0.92);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(51, 65, 85, 0.8);
-        border-radius: 8px;
+        width: 350px;
+        max-height: calc(100vh - 90px);
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
         display: flex;
         flex-direction: column;
         z-index: 90;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
         overflow: hidden;
-        transition: transform 0.2s ease, opacity 0.2s ease;
       }
 
       .panel-header {
@@ -148,10 +176,11 @@
         align-items: center;
         justify-content: space-between;
         padding: 10px 14px;
-        background: rgba(30, 41, 59, 0.95);
-        border-bottom: 1px solid #334155;
+        background: rgba(30, 41, 59, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         font-size: 12px;
         font-weight: bold;
+        letter-spacing: 0.3px;
       }
 
       .panel-header-actions {
@@ -164,14 +193,14 @@
         border: none;
         color: #94a3b8;
         cursor: pointer;
-        font-size: 14px;
-        padding: 2px 4px;
+        font-size: 13px;
+        padding: 3px 6px;
         border-radius: 4px;
       }
 
       .btn-icon:hover {
         color: #ffffff;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.12);
       }
 
       #event-feed-list {
@@ -186,19 +215,20 @@
         width: 6px;
       }
       #event-feed-list::-webkit-scrollbar-thumb {
-        background: #475569;
+        background: #334155;
         border-radius: 3px;
       }
 
-      /* Modal Inspector de Agentes */
+      /* Modal Inspector de Agentes tipo Credencial Tecnológica */
       #agent-inspector-modal {
         position: absolute;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         display: none;
         align-items: center;
         justify-content: center;
@@ -206,11 +236,13 @@
       }
 
       .inspector-card {
-        width: 420px;
-        background: #0f172a;
+        width: 440px;
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border: 1px solid #38bdf8;
-        border-radius: 12px;
-        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.2);
+        border-radius: 14px;
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 24px rgba(56, 189, 248, 0.25);
         overflow: hidden;
       }
 
@@ -218,32 +250,32 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 18px;
-        background: #1e293b;
-        border-bottom: 1px solid #334155;
+        padding: 16px 20px;
+        background: rgba(30, 41, 59, 0.85);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       }
 
       .inspector-agent-info {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
       }
 
       .agent-avatar-circle {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        font-weight: bold;
+        font-size: 20px;
+        font-weight: 800;
         color: #ffffff;
-        box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
       }
 
       .inspector-body {
-        padding: 16px 18px;
+        padding: 18px 20px;
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -253,12 +285,14 @@
       .info-row {
         display: flex;
         justify-content: space-between;
-        border-bottom: 1px solid #1e293b;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         padding-bottom: 8px;
       }
 
       .info-label {
         color: #94a3b8;
+        font-size: 12px;
       }
 
       .info-value {
@@ -268,66 +302,71 @@
 
       .last-message-box {
         margin-top: 6px;
-        padding: 10px;
-        background: #1e293b;
-        border-radius: 6px;
+        padding: 12px;
+        background: rgba(30, 41, 59, 0.7);
+        border-radius: 8px;
         border-left: 3px solid #38bdf8;
-        font-family: monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-size: 11px;
         color: #cbd5e1;
-        max-height: 100px;
+        max-height: 110px;
         overflow-y: auto;
         white-space: pre-wrap;
+        line-height: 1.5;
       }
 
       .inspector-footer {
-        padding: 10px 18px;
-        background: #090d16;
+        padding: 10px 20px;
+        background: rgba(8, 12, 22, 0.8);
         text-align: right;
-        font-size: 11px;
+        font-size: 10px;
+        letter-spacing: 0.5px;
         color: #64748b;
+        text-transform: uppercase;
       }
     </style>
   </head>
   <body>
-    <!-- Barra Superior HUD -->
-    <header id="hud-bar">
-      <div class="hud-section">
+    <!-- HUD Izquierdo Flotante (Glassmorphism) -->
+    <header id="hud-left" class="hud-floating-capsule">
+      <div class="app-title-group">
         <div class="app-title">
           <span class="live-dot"></span>
           <span>AI AGENT OFFICE</span>
         </div>
-        <div id="status-pill" class="badge-pill">
-          🟢 <span style="color:#4ade80;">Conectando...</span>
-        </div>
-        <div id="mode-badge" class="badge-pill">
-          🎭 <span>Simulación Mock</span>
-        </div>
+        <span class="app-subtitle">Tech Loft 2.5D • Silicon Valley</span>
       </div>
-
-      <div class="hud-section">
-        <button id="btn-toggle-sim" class="btn-action">
-          ⏸ Pausar Simulación
-        </button>
-        <button id="btn-step-sim" class="btn-action btn-secondary">
-          ⏭ Siguiente Paso
-        </button>
-        <button id="btn-center-cam" class="btn-action btn-secondary">
-          🎯 Centrar Vista
-        </button>
-        <button id="btn-toggle-events" class="btn-action btn-secondary">
-          📋 Eventos (<span id="event-count-badge">0</span>)
-        </button>
+      <div id="status-pill" class="badge-pill">
+        🟢 <span style="color:#4ade80;">Conectando...</span>
+      </div>
+      <div id="mode-badge" class="badge-pill">
+        🎭 <span>Simulación Mock</span>
       </div>
     </header>
 
-    <!-- Contenedor del Juego Phaser -->
+    <!-- HUD Derecho Flotante (Glassmorphism) -->
+    <header id="hud-right" class="hud-floating-capsule">
+      <button id="btn-toggle-sim" class="btn-action">
+        ⏸ Pausar Simulación
+      </button>
+      <button id="btn-step-sim" class="btn-action btn-secondary">
+        ⏭ Siguiente Paso
+      </button>
+      <button id="btn-center-cam" class="btn-action btn-secondary">
+        🎯 Centrar Hub
+      </button>
+      <button id="btn-toggle-events" class="btn-action btn-secondary">
+        📋 Actividad (<span id="event-count-badge">0</span>)
+      </button>
+    </header>
+
+    <!-- Contenedor del Juego Phaser 2.5D -->
     <main id="game-container"></main>
 
-    <!-- Panel Lateral Desplegable: Feed de Eventos -->
+    <!-- Panel Lateral Desplegable: Feed de Actividad en Vivo -->
     <aside id="event-feed-panel">
       <div class="panel-header">
-        <span>⚡ Feed de Actividad en Vivo</span>
+        <span>⚡ Actividad de Agentes en Vivo</span>
         <div class="panel-header-actions">
           <button id="btn-clear-events" class="btn-icon" title="Limpiar feed">🗑️</button>
           <button id="btn-close-events" class="btn-icon" title="Ocultar feed">✖</button>
@@ -336,7 +375,7 @@
       <div id="event-feed-list"></div>
     </aside>
 
-    <!-- Modal Inspector de Agentes -->
+    <!-- Modal Inspector de Agentes (Credencial Tecnológica) -->
     <div id="agent-inspector-modal">
       <div class="inspector-card">
         <div class="inspector-header">
@@ -355,16 +394,16 @@
             <span id="inspector-state" class="info-value">IDLE</span>
           </div>
           <div class="info-row">
-            <span class="info-label">Archivo de Logs</span>
+            <span class="info-label">Ruta de Logs Monitoreada</span>
             <span id="inspector-watch-target" class="info-value" style="font-family: monospace; font-size: 11px;">logs/target.jsonl</span>
           </div>
           <div>
-            <span class="info-label" style="display: block; margin-bottom: 4px;">Última Actividad</span>
-            <div id="inspector-last-message" class="last-message-box">Sin actividad reciente</div>
+            <span class="info-label" style="display: block; margin-bottom: 4px;">Última Actividad / Evento</span>
+            <div id="inspector-last-message" class="last-message-box">Sin actividad reciente registrada.</div>
           </div>
         </div>
         <div class="inspector-footer">
-          AI Agent Office — Inspector de Entidad
+          AI AGENT OFFICE — CREDENCIAL DE ENTIDAD AUTÓNOMA
         </div>
       </div>
     </div>

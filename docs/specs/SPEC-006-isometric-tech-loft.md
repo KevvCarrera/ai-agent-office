@@ -1,6 +1,6 @@
 # SPEC-006: Rediseño Isométrico 2.5D — Silicon Valley Tech Loft & Hub Central
 
-- **Estado:** EN PROCESO
+- **Estado:** COMPLETADO / APROBADO (LGTM)
 - **Responsables:**
   - **Orchestrator:** Especificación técnica e integración.
   - **Developer:** Reescritura del motor isométrico 2.5D, texturas, entidades y HUD.

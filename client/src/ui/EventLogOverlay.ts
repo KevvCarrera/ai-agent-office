@@ -29,6 +29,14 @@ export class EventLogOverlay {
     }
   }
 
+  private getAgentBadgeColor(agentId: string): string {
+    const id = agentId.toLowerCase();
+    if (id.includes("arch") || id.includes("claude")) return "#f59e0b"; // Ámbar
+    if (id.includes("back") || id.includes("gemini")) return "#06b6d4"; // Cian
+    if (id.includes("qa") || id.includes("open")) return "#10b981"; // Esmeralda
+    return "#38bdf8";
+  }
+
   public addEvent(event: OfficeEvent): void {
     if (!this.listElement) return;
 
@@ -41,10 +49,7 @@ export class EventLogOverlay {
       ? new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       : new Date().toLocaleTimeString();
 
-    // Determinar estilo según agente o estado
-    let badgeColor = "#3b82f6";
-    if (event.agentId === "backend-developer") badgeColor = "#10b981";
-    if (event.agentId === "qa-engineer") badgeColor = "#8b5cf6";
+    const badgeColor = this.getAgentBadgeColor(event.agentId);
 
     let stateIcon = "💤";
     if (event.state === "THINKING") stateIcon = "💡";
@@ -56,13 +61,14 @@ export class EventLogOverlay {
     item.style.cssText = `
       padding: 8px 10px;
       margin-bottom: 6px;
-      background: rgba(30, 41, 59, 0.85);
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
       border-left: 3px solid ${badgeColor};
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 11px;
       line-height: 1.4;
       color: #e2e8f0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     `;
 
     const toolBadge = event.toolName
@@ -85,10 +91,8 @@ export class EventLogOverlay {
       ${contentSnippet}
     `;
 
-    // Insertar al inicio de la lista
     this.listElement.prepend(item);
 
-    // Limitar cantidad máxima de elementos en memoria DOM
     while (this.listElement.children.length > this.maxItems) {
       this.listElement.lastElementChild?.remove();
     }

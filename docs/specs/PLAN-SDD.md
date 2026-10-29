@@ -93,3 +93,4 @@ sequenceDiagram
 | **Hito 3: Frontend Phaser** | `SPEC-003` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
 | **Hito 4: Colaboración 2D** | `SPEC-004` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |
 | **Hito 5: Ingesta Real** | `SPEC-005` | ✅ Listo | Integrado en parsers | ✅ Verificado | Integrado a `main` |
+| **Hito 6: Rediseño Isométrico 2.5D** | `SPEC-006` | ✅ Completado | ✅ Entregado | ✅ Aprobado (LGTM) | Integrado a `main` |

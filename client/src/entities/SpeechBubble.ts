@@ -6,6 +6,7 @@ export interface SpeechBubbleOptions {
   message: string;
   durationMs?: number;
   onComplete?: () => void;
+  accentColor?: string;
 }
 
 export class SpeechBubble extends Phaser.GameObjects.Container {
@@ -18,8 +19,9 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number, y: number, options: SpeechBubbleOptions) {
     super(scene, x, y);
 
-    const maxWidth = 220;
+    const maxWidth = 240;
     const padding = 10;
+    const accentColor = options.accentColor || "#38bdf8";
 
     // 1. Título / Header
     const title = options.targetName
@@ -30,7 +32,7 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "11px",
       fontStyle: "bold",
-      color: "#2563eb"
+      color: accentColor
     });
 
     // 2. Mensaje formateado
@@ -42,7 +44,7 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
     this.messageText = scene.add.text(padding, padding + 16, truncatedMessage, {
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "11px",
-      color: "#1e293b",
+      color: "#f1f5f9",
       wordWrap: { width: maxWidth - padding * 2, useAdvancedWrap: true },
       lineSpacing: 2
     });
@@ -53,28 +55,29 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
     );
     const contentHeight = padding + 16 + this.messageText.height + padding;
 
-    // 3. Gráficos de fondo con estilo pixel art / moderno
+    // 3. Gráficos de fondo con estilo Glassmorphism
     this.bgGraphics = scene.add.graphics();
-    // Sombra suave
-    this.bgGraphics.fillStyle(0x000000, 0.25);
-    this.bgGraphics.fillRoundedRect(3, 3, contentWidth, contentHeight, 6);
-    // Fondo blanco
-    this.bgGraphics.fillStyle(0xffffff, 1);
-    this.bgGraphics.fillRoundedRect(0, 0, contentWidth, contentHeight, 6);
-    // Borde oscuro
-    this.bgGraphics.lineStyle(2, 0x0f172a, 1);
-    this.bgGraphics.strokeRoundedRect(0, 0, contentWidth, contentHeight, 6);
+    // Sombra suave profunda
+    this.bgGraphics.fillStyle(0x000000, 0.45);
+    this.bgGraphics.fillRoundedRect(3, 3, contentWidth, contentHeight, 8);
+    // Fondo oscuro translúcido
+    this.bgGraphics.fillStyle(0x0f172a, 0.95);
+    this.bgGraphics.fillRoundedRect(0, 0, contentWidth, contentHeight, 8);
+    // Borde brillante con resplandor
+    const hexColor = Phaser.Display.Color.HexStringToColor(accentColor).color;
+    this.bgGraphics.lineStyle(1.5, hexColor, 0.85);
+    this.bgGraphics.strokeRoundedRect(0, 0, contentWidth, contentHeight, 8);
 
     // 4. Flecha inferior que apunta al emisor
     this.tailSprite = scene.add.sprite(contentWidth / 2, contentHeight + 4, "bubble_tail");
     this.tailSprite.setOrigin(0.5, 0);
 
-    // Añadir componentes al contenedor (orden de capas)
+    // Añadir componentes al contenedor
     this.add([this.bgGraphics, this.tailSprite, this.headerText, this.messageText]);
 
-    // Centrar el contenedor respecto a las coordenadas proporcionadas (x, y)
-    this.setPosition(x - contentWidth / 2, y - contentHeight - 16);
-    this.setDepth(1000);
+    // Posicionamiento centrado
+    this.setPosition(x - contentWidth / 2, y - contentHeight - 20);
+    this.setDepth(15000);
 
     // Efecto Pop-in animado
     this.setScale(0.1);

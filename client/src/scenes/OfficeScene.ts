@@ -4,19 +4,26 @@ import { socketClient, type AgentCurrentState } from "../network/socketClient.js
 import { Room } from "../entities/Room.js";
 import { Desk } from "../entities/Desk.js";
 import { AgentSprite } from "../entities/AgentSprite.js";
+import { cartToIso, getIsoDepth } from "../utils/isoMath.js";
 
 export class OfficeScene extends Phaser.Scene {
-  private tileSize = 48;
-  private officeBounds = {
-    minX: 0,
-    maxX: 15,
-    minY: 0,
-    maxY: 11
-  };
-
   private rooms: Room[] = [];
   private desks: Map<string, Desk> = new Map();
   private agents: Map<string, AgentSprite> = new Map();
+
+  // Hub Central visual entities
+  private smartboardSprite?: Phaser.GameObjects.Sprite;
+  private meetingTableSprite?: Phaser.GameObjects.Sprite;
+  private coffeeStationSprite?: Phaser.GameObjects.Sprite;
+  private hubChairs: Phaser.GameObjects.Sprite[] = [];
+
+  // Puestos en la mesa de reuniones del Hub Central
+  private hubSeats = {
+    west: { x: -44, y: 0 },
+    north: { x: 0, y: -22 },
+    east: { x: 44, y: 0 },
+    south: { x: 0, y: 22 }
+  };
 
   private isDragging = false;
   private dragStartX = 0;
@@ -27,7 +34,7 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.createHallwayAndCommonAreas();
+    this.createLoftFloorAndHub();
     this.setupCameraControls();
     this.setupSocketSubscription();
 
@@ -36,84 +43,103 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   /**
-   * Renderiza el suelo general de parquet, paredes exteriores y zonas comunes
+   * Construye el suelo isométrico general, el Hub Central de Reuniones y la estación de café
    */
-  private createHallwayAndCommonAreas(): void {
-    const { minX, maxX, minY, maxY } = this.officeBounds;
+  private createLoftFloorAndHub(): void {
+    // 1. Suelo general de Parquet de Madera Cálida en cuadrícula isométrica (-9 a 9)
+    for (let gx = -9; gx <= 9; gx++) {
+      for (let gy = -9; gy <= 9; gy++) {
+        const iso = cartToIso(gx, gy);
 
-    // 1. Suelo base de parquet en todo el edificio
-    for (let gx = minX; gx <= maxX; gx++) {
-      for (let gy = minY; gy <= maxY; gy++) {
-        const tile = this.add.sprite(
-          gx * this.tileSize,
-          gy * this.tileSize,
-          "floor_parquet"
-        );
+        // Pasillos principales en hormigón pulido gris tecnológico
+        const isHallway = Math.abs(gx) <= 1 || Math.abs(gy) <= 1;
+        const isHub = Math.abs(gx) <= 3 && Math.abs(gy) <= 3;
+
+        let tileKey = "iso_floor_parquet";
+        if (isHub) {
+          tileKey = "iso_carpet_hub";
+        } else if (isHallway) {
+          tileKey = "iso_floor_concrete";
+        }
+
+        const tile = this.add.sprite(iso.x, iso.y, tileKey);
         tile.setOrigin(0.5, 0.5);
         tile.setDepth(0);
       }
     }
 
-    // 2. Muros perimetrales
-    for (let gx = minX; gx <= maxX; gx++) {
-      const topWall = this.add.sprite(
-        gx * this.tileSize,
-        minY * this.tileSize - 12,
-        "wall_solid_h"
-      );
-      topWall.setOrigin(0.5, 0.5);
-      topWall.setDepth(40);
-    }
+    // 2. Hub Central: Columnas de loft de acero en las esquinas
+    const hubCorners = [
+      { x: -3.5, y: -3.5 },
+      { x: 3.5, y: -3.5 },
+      { x: -3.5, y: 3.5 },
+      { x: 3.5, y: 3.5 }
+    ];
 
-    for (let gy = minY; gy <= maxY; gy++) {
-      const leftWall = this.add.sprite(
-        minX * this.tileSize - 8,
-        gy * this.tileSize,
-        "wall_solid_v"
-      );
-      leftWall.setOrigin(0.5, 0.5);
-      leftWall.setDepth(40);
+    hubCorners.forEach((corner) => {
+      const iso = cartToIso(corner.x, corner.y);
+      const pillar = this.add.sprite(iso.x, iso.y - 12, "iso_loft_pillar");
+      pillar.setOrigin(0.5, 0.5);
+      pillar.setDepth(getIsoDepth(iso.y, 0, 15));
+    });
 
-      const rightWall = this.add.sprite(
-        maxX * this.tileSize + 8,
-        gy * this.tileSize,
-        "wall_solid_v"
-      );
-      rightWall.setOrigin(0.5, 0.5);
-      rightWall.setDepth(40);
-    }
+    // 3. Hub Central: Gran Mesa Ovalada de Conferencias en (0, 0)
+    const tableIso = cartToIso(0, 0);
+    this.meetingTableSprite = this.add.sprite(tableIso.x, tableIso.y, "iso_meeting_table");
+    this.meetingTableSprite.setOrigin(0.5, 0.5);
+    this.meetingTableSprite.setDepth(getIsoDepth(tableIso.y, 0, 10));
 
-    // 3. Área común: Dispensador de agua y plantas en el vestíbulo
-    const waterCooler = this.add.sprite(1 * this.tileSize, 6 * this.tileSize, "water_cooler");
-    waterCooler.setOrigin(0.5, 0.5);
-    waterCooler.setDepth(6 * this.tileSize + 10);
+    // Sillas alrededor de la mesa de reuniones
+    const chairPositions = [
+      { x: -44, y: 0, flip: false },
+      { x: 44, y: 0, flip: true },
+      { x: 0, y: -22, flip: false },
+      { x: 0, y: 22, flip: false }
+    ];
 
-    const cornerPlant = this.add.sprite(1 * this.tileSize, 8 * this.tileSize, "potted_plant");
-    cornerPlant.setOrigin(0.5, 0.5);
-    cornerPlant.setDepth(8 * this.tileSize + 10);
+    chairPositions.forEach((pos) => {
+      const chair = this.add.sprite(tableIso.x + pos.x, tableIso.y + pos.y, "iso_chair_desk");
+      chair.setOrigin(0.5, 0.5);
+      chair.setFlipX(pos.flip);
+      chair.setDepth(getIsoDepth(tableIso.y + pos.y, 0, 8));
+      this.hubChairs.push(chair);
+    });
 
-    // Servidores en el lateral derecho
-    const server1 = this.add.sprite(14 * this.tileSize, 6 * this.tileSize, "server_rack");
-    server1.setOrigin(0.5, 0.5);
-    server1.setDepth(6 * this.tileSize + 10);
+    // 4. Hub Central: Pizarra / Pantalla Inteligente (Smart Board) en el fondo del Hub
+    const boardIso = cartToIso(0, -2.5);
+    this.smartboardSprite = this.add.sprite(boardIso.x, boardIso.y - 12, "iso_smartboard_idle");
+    this.smartboardSprite.setOrigin(0.5, 0.5);
+    this.smartboardSprite.setDepth(getIsoDepth(boardIso.y, 0, 12));
 
-    const server2 = this.add.sprite(14 * this.tileSize, 8 * this.tileSize, "server_rack");
-    server2.setOrigin(0.5, 0.5);
-    server2.setDepth(8 * this.tileSize + 10);
+    // 5. Hub Central: Estación de Café Lounge en lateral izquierdo
+    const coffeeIso = cartToIso(-2.5, -1.5);
+    this.coffeeStationSprite = this.add.sprite(coffeeIso.x, coffeeIso.y - 10, "iso_coffee_station");
+    this.coffeeStationSprite.setOrigin(0.5, 0.5);
+    this.coffeeStationSprite.setDepth(getIsoDepth(coffeeIso.y, 0, 12));
+
+    // 6. Hub Central: Plantas interiores estilizadas
+    const plant1Iso = cartToIso(2.5, -1.5);
+    const plant1 = this.add.sprite(plant1Iso.x, plant1Iso.y - 10, "iso_plant_fiddle");
+    plant1.setOrigin(0.5, 0.5);
+    plant1.setDepth(getIsoDepth(plant1Iso.y, 0, 12));
+
+    const plant2Iso = cartToIso(2.5, 2.5);
+    const plant2 = this.add.sprite(plant2Iso.x, plant2Iso.y - 6, "potted_plant");
+    plant2.setOrigin(0.5, 0.5);
+    plant2.setDepth(getIsoDepth(plant2Iso.y, 0, 12));
   }
 
   /**
-   * Configura arrastre (pan) y zoom con la rueda del ratón
+   * Configura controles de cámara suaves: Pan y Zoom con centrado en Hub Central
    */
   private setupCameraControls(): void {
     const cam = this.cameras.main;
 
-    // Centrar inicialmente la cámara en la oficina
+    // Centrar inicialmente la cámara en (0, 0) - Hub Central
     this.centerCamera();
 
     // 1. Arrastre (Pan)
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      // Si se pulsa botón principal o secundario
       if (pointer.button === 0 || pointer.button === 2) {
         this.isDragging = true;
         this.dragStartX = pointer.x;
@@ -136,24 +162,21 @@ export class OfficeScene extends Phaser.Scene {
       this.isDragging = false;
     });
 
-    // 2. Zoom con la rueda del ratón
+    // 2. Zoom suave (0.5x a 2.5x)
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _gameObjects: unknown[], _deltaX: number, deltaY: number) => {
-      const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
-      const newZoom = Phaser.Math.Clamp(cam.zoom * zoomFactor, 0.55, 2.2);
+      const zoomFactor = deltaY > 0 ? 0.92 : 1.08;
+      const newZoom = Phaser.Math.Clamp(cam.zoom * zoomFactor, 0.5, 2.5);
       cam.setZoom(newZoom);
     });
   }
 
   /**
-   * Centra suavemente la vista en el centro de la oficina
+   * Centra suavemente la vista en el Hub Central (0, 0)
    */
   public centerCamera(): void {
     const cam = this.cameras.main;
-    const centerX = ((this.officeBounds.minX + this.officeBounds.maxX) / 2) * this.tileSize;
-    const centerY = ((this.officeBounds.minY + this.officeBounds.maxY) / 2) * this.tileSize;
-
-    cam.pan(centerX, centerY, 500, "Power2");
-    cam.zoomTo(1.0, 500, "Power2");
+    cam.pan(0, 0, 500, "Power2");
+    cam.zoomTo(1.15, 500, "Power2");
   }
 
   /**
@@ -175,7 +198,7 @@ export class OfficeScene extends Phaser.Scene {
       this.syncAgentStates(states);
     });
 
-    // En caso de que la configuración ya esté en caché en socketClient
+    // En caso de que la configuración ya esté en caché
     const cachedConfig = socketClient.getConfig();
     if (cachedConfig) {
       this.buildOfficeFromConfig(cachedConfig);
@@ -183,10 +206,9 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   /**
-   * Construye dinámicamente las salas, escritorios y agentes según la configuración
+   * Construye las salas, escritorios y agentes en perspectiva isométrica
    */
   public buildOfficeFromConfig(config: OfficeConfig): void {
-    // Limpiar agentes anteriores si existen
     this.agents.forEach((agent) => agent.destroy());
     this.agents.clear();
 
@@ -196,23 +218,22 @@ export class OfficeScene extends Phaser.Scene {
     this.rooms.forEach((room) => room.destroy());
     this.rooms = [];
 
-    // 1. Construir Salas
+    // 1. Construir Salas Isométricas
     for (const office of config.offices) {
-      const room = new Room(this, office, this.tileSize);
+      const room = new Room(this, office);
       this.rooms.push(room);
 
-      // 2. Construir Escritorio asignado
+      // 2. Construir Escritorio Isométrico Asignado
       const desk = new Desk(this, {
         id: `desk_${office.id}`,
         gridX: office.desk_coords.x,
         gridY: office.desk_coords.y,
-        tileSize: this.tileSize,
         agentId: office.assigned_agent
       });
       this.desks.set(office.assigned_agent, desk);
     }
 
-    // 3. Instanciar Agentes
+    // 3. Instanciar Agentes en sus Escritorios
     for (const agentMeta of config.agents) {
       const desk = this.desks.get(agentMeta.id);
       if (desk) {
@@ -228,18 +249,62 @@ export class OfficeScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Maneja eventos entrantes con soporte para colaboración en Hub Central o despacho
+   */
   private handleIncomingEvent(event: OfficeEvent): void {
     const agent = this.agents.get(event.agentId);
     if (agent) {
-      agent.handleEvent(event, this.agents);
+      agent.handleEvent(event, this.agents, (initiator, target, ev) => {
+        this.triggerHubMeeting(initiator, target, ev);
+      });
     }
+  }
+
+  /**
+   * Convocatoria al Hub Central para revisiones de código, especificaciones y entregables
+   */
+  private triggerHubMeeting(
+    initiator: AgentSprite,
+    target: AgentSprite,
+    event: OfficeEvent
+  ): void {
+    // Encender la pantalla inteligente del Hub con diagrama de arquitectura / review
+    if (this.smartboardSprite) {
+      this.smartboardSprite.setTexture("iso_smartboard_active");
+    }
+
+    // Determinar asientos en la mesa ovalada
+    const seat1 = this.hubSeats.west;
+    const seat2 = this.hubSeats.east;
+
+    let arrivedCount = 0;
+    const onParticipantArrived = () => {
+      arrivedCount++;
+      if (arrivedCount === 2) {
+        // Ambos llegaron a la mesa: iniciar diálogo
+        initiator.showCollaborationBubble(target, event, () => {
+          // Finalizado el diálogo: apagar pizarra inteligente y regresar a puestos
+          if (this.smartboardSprite) {
+            this.smartboardSprite.setTexture("iso_smartboard_idle");
+          }
+          initiator.walkBackHome();
+          target.walkBackHome();
+        });
+      }
+    };
+
+    initiator.walkToMeeting(seat1.x, seat1.y, onParticipantArrived);
+    target.walkToMeeting(seat2.x, seat2.y, onParticipantArrived);
   }
 
   private syncAgentStates(states: Record<string, AgentCurrentState>): void {
     for (const [agentId, stateData] of Object.entries(states)) {
       const agent = this.agents.get(agentId);
       if (agent && stateData.lastEvent) {
-        agent.handleEvent(stateData.lastEvent, this.agents);
+        agent.handleEvent(stateData.lastEvent, this.agents, (initiator, target, ev) => {
+          this.triggerHubMeeting(initiator, target, ev);
+        });
       }
     }
   }

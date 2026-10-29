@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import type { AgentMetadata, AgentState, OfficeEvent } from "@office/shared";
 import type { Desk } from "./Desk.js";
 import { SpeechBubble } from "./SpeechBubble.js";
+import { getIsoDepth, isoDistance } from "../utils/isoMath.js";
 
 export class AgentSprite extends Phaser.GameObjects.Container {
   public agentId: string;
@@ -24,6 +25,7 @@ export class AgentSprite extends Phaser.GameObjects.Container {
   private typingTimer?: Phaser.Time.TimerEvent;
   private currentBubble?: SpeechBubble;
   private isReturningHome = false;
+  private isInMeeting = false;
 
   constructor(scene: Phaser.Scene, metadata: AgentMetadata, desk: Desk) {
     const seatPos = desk.getSeatPosition();
@@ -36,16 +38,16 @@ export class AgentSprite extends Phaser.GameObjects.Container {
 
     const spriteKey = this.metadata.sprite || "avatar_blue";
 
-    // 1. Sombra bajo los pies
-    this.shadowSprite = scene.add.sprite(0, 20, "agent_shadow");
+    // 1. Sombra suave elíptica 2.5D proyectada en el suelo
+    this.shadowSprite = scene.add.sprite(0, 16, "iso_agent_shadow");
     this.shadowSprite.setOrigin(0.5, 0.5);
 
-    // 2. Sprite principal del personaje
-    this.characterSprite = scene.add.sprite(0, 0, `${spriteKey}_sit`);
+    // 2. Sprite principal del personaje en perspectiva isométrica
+    this.characterSprite = scene.add.sprite(0, 0, `${spriteKey}_iso_sit`);
     this.characterSprite.setOrigin(0.5, 0.5);
 
     // 3. Etiqueta de Nombre del Agente
-    this.nameLabel = scene.add.text(0, 24, metadata.name, {
+    this.nameLabel = scene.add.text(0, 22, metadata.name, {
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "10px",
       fontStyle: "bold",
@@ -55,14 +57,16 @@ export class AgentSprite extends Phaser.GameObjects.Container {
     });
     this.nameLabel.setOrigin(0.5, 0);
 
-    // 4. Etiqueta de Modelo de IA
+    // 4. Etiqueta de Modelo de IA con color del proveedor
+    const accentColor = this.getProviderColor();
     const shortModel = metadata.model.split(" ")[0] || "AI";
-    this.modelBadge = scene.add.text(0, 36, shortModel, {
+    this.modelBadge = scene.add.text(0, 34, shortModel, {
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "9px",
-      color: "#94a3b8",
-      backgroundColor: "#0f172a",
-      padding: { x: 3, y: 1 }
+      fontStyle: "bold",
+      color: accentColor,
+      backgroundColor: "rgba(15, 23, 42, 0.85)",
+      padding: { x: 4, y: 1 }
     });
     this.modelBadge.setOrigin(0.5, 0);
 
@@ -84,7 +88,7 @@ export class AgentSprite extends Phaser.GameObjects.Container {
     this.toolBadge.add([this.toolBg, this.toolText]);
     this.toolBadge.setVisible(false);
 
-    // Agregar todos los elementos al contenedor
+    // Agregar componentes al contenedor
     this.add([
       this.shadowSprite,
       this.characterSprite,
@@ -94,10 +98,10 @@ export class AgentSprite extends Phaser.GameObjects.Container {
       this.toolBadge
     ]);
 
-    this.setDepth(this.y + 20);
+    this.setDepth(getIsoDepth(this.y, 0, 20));
 
-    // Interactividad al hacer clic
-    this.setSize(36, 54);
+    // Interactividad
+    this.setSize(36, 52);
     this.setInteractive({ cursor: "pointer" });
 
     this.on("pointerdown", () => {
@@ -121,9 +125,15 @@ export class AgentSprite extends Phaser.GameObjects.Container {
     this.applyIdleState();
   }
 
-  /**
-   * Resalta al agente al ser seleccionado
-   */
+  public getProviderColor(): string {
+    const p = (this.metadata.provider || "").toLowerCase();
+    const id = this.agentId.toLowerCase();
+    if (p.includes("claude") || id.includes("arch")) return "#f59e0b"; // Ámbar
+    if (p.includes("gemini") || id.includes("back")) return "#06b6d4"; // Cian
+    if (p.includes("opencode") || id.includes("qa")) return "#10b981"; // Esmeralda
+    return "#38bdf8";
+  }
+
   private pulseSelection(): void {
     this.scene.tweens.add({
       targets: this,
@@ -135,25 +145,46 @@ export class AgentSprite extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Actualiza el estado visual del agente según los eventos del servidor
+   * Procesa un evento entrante y decide la animación o colaboración correspondiente
    */
-  public handleEvent(event: OfficeEvent, allAgents: Map<string, AgentSprite>): void {
+  public handleEvent(
+    event: OfficeEvent,
+    allAgents: Map<string, AgentSprite>,
+    onMeetingRequested?: (initiator: AgentSprite, target: AgentSprite, ev: OfficeEvent) => void
+  ): void {
     this.lastEvent = event;
     this.currentState = event.state;
 
-    // Si hay un targetAgentId y es un mensaje o colaboración, desplazarse al destino
+    // Detectar colaboración entre agentes
     if (event.targetAgentId && event.targetAgentId !== this.agentId && event.type === "MESSAGE_SENT") {
       const targetAgent = allAgents.get(event.targetAgentId);
       if (targetAgent) {
-        this.walkToTargetAndCollaborate(targetAgent, event);
-        return;
+        // Comprobar si es un tema de revisión/arquitectura/entrega que convoca al Hub Central
+        const contentStr = (event.content || "").toLowerCase();
+        const isMeetingTopic =
+          contentStr.includes("review") ||
+          contentStr.includes("revis") ||
+          contentStr.includes("arquitect") ||
+          contentStr.includes("entrega") ||
+          contentStr.includes("spec") ||
+          contentStr.includes("audit") ||
+          contentStr.includes("aprob") ||
+          contentStr.includes("pr");
+
+        if (isMeetingTopic && onMeetingRequested) {
+          onMeetingRequested(this, targetAgent, event);
+          return;
+        } else {
+          this.walkToTargetAndCollaborate(targetAgent, event);
+          return;
+        }
       }
     }
 
     switch (event.state) {
       case "IDLE":
-        if (!this.isReturningHome && this.walkTween?.isPlaying()) {
-          // No interrumpir si está regresando
+        if (!this.isReturningHome && !this.isInMeeting && this.walkTween?.isPlaying()) {
+          // No interrumpir si está desplazándose
         } else {
           this.applyIdleState();
         }
@@ -168,7 +199,6 @@ export class AgentSprite extends Phaser.GameObjects.Container {
         break;
 
       case "WALKING":
-        // Manejado por desplazamiento
         break;
 
       default:
@@ -180,10 +210,11 @@ export class AgentSprite extends Phaser.GameObjects.Container {
   /**
    * Estado IDLE: Sentado en su escritorio en reposo
    */
-  private applyIdleState(): void {
+  public applyIdleState(): void {
     this.clearStateEffects();
+    this.isInMeeting = false;
     const spriteKey = this.metadata.sprite || "avatar_blue";
-    this.characterSprite.setTexture(`${spriteKey}_sit`);
+    this.characterSprite.setTexture(`${spriteKey}_iso_sit`);
     this.homeDesk.setWorking(false);
 
     // Animación sutil de respiración
@@ -203,13 +234,13 @@ export class AgentSprite extends Phaser.GameObjects.Container {
   private applyThinkingState(): void {
     this.clearStateEffects();
     const spriteKey = this.metadata.sprite || "avatar_blue";
-    this.characterSprite.setTexture(`${spriteKey}_sit`);
+    this.characterSprite.setTexture(`${spriteKey}_iso_sit`);
     this.homeDesk.setWorking(true);
 
     this.stateIcon.setTexture("icon_bulb");
     this.stateIcon.setVisible(true);
 
-    // Animación flotante de bombilla
+    // Animación flotante de bombilla con destello
     this.scene.tweens.add({
       targets: this.stateIcon,
       y: { from: -32, to: -38 },
@@ -235,7 +266,7 @@ export class AgentSprite extends Phaser.GameObjects.Container {
       loop: true,
       callback: () => {
         frame = frame === 0 ? 1 : 0;
-        this.characterSprite.setTexture(`${spriteKey}_typing_${frame}`);
+        this.characterSprite.setTexture(`${spriteKey}_iso_typing_${frame}`);
       }
     });
 
@@ -253,7 +284,7 @@ export class AgentSprite extends Phaser.GameObjects.Container {
     const height = 16;
 
     this.toolBg.clear();
-    this.toolBg.fillStyle(0x0f172a, 0.9);
+    this.toolBg.fillStyle(0x0f172a, 0.95);
     this.toolBg.fillRoundedRect(-width / 2, -height / 2, width, height, 4);
     this.toolBg.lineStyle(1, 0x38bdf8, 1);
     this.toolBg.strokeRoundedRect(-width / 2, -height / 2, width, height, 4);
@@ -271,62 +302,76 @@ export class AgentSprite extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Desplazamiento animado (walking) hacia otro escritorio para colaborar
+   * Desplazamiento animado hacia otro escritorio para consulta directa
    */
   public walkToTargetAndCollaborate(targetAgent: AgentSprite, event: OfficeEvent): void {
     this.clearStateEffects();
     this.isReturningHome = false;
 
     const targetPos = targetAgent.homeDesk.getVisitorPosition();
+    this.walkTo(targetPos.x, targetPos.y, () => {
+      this.showCollaborationBubble(targetAgent, event, () => {
+        this.walkBackHome();
+      });
+    });
+  }
+
+  /**
+   * Desplazamiento hacia el Hub Central (Mesa de Reuniones)
+   */
+  public walkToMeeting(
+    targetX: number,
+    targetY: number,
+    onArrived: () => void
+  ): void {
+    this.clearStateEffects();
+    this.isInMeeting = true;
+    this.isReturningHome = false;
+    this.walkTo(targetX, targetY, onArrived);
+  }
+
+  /**
+   * Rutina de movimiento en diagonales isométricas con frame walking
+   */
+  public walkTo(destX: number, destY: number, onComplete: () => void): void {
     const spriteKey = this.metadata.sprite || "avatar_blue";
+    const dist = isoDistance({ x: this.x, y: this.y }, { x: destX, y: destY });
+    const duration = Math.max(700, (dist / 110) * 1000);
 
-    const dx = targetPos.x - this.x;
-    const dy = targetPos.y - this.y;
-    const distance = Phaser.Math.Distance.Between(this.x, this.y, targetPos.x, targetPos.y);
-    const duration = Math.max(800, (distance / 120) * 1000);
+    const dx = destX - this.x;
 
-    // Animación de pasos durante el tween
     let walkFrame = 0;
     const walkTimer = this.scene.time.addEvent({
       delay: 160,
       loop: true,
       callback: () => {
         walkFrame = walkFrame === 0 ? 1 : 0;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          const dir = dx > 0 ? "right" : "left";
-          this.characterSprite.setTexture(`${spriteKey}_walk_${dir}_${walkFrame}`);
-        } else {
-          const dir = dy > 0 ? "down" : "down";
-          this.characterSprite.setTexture(`${spriteKey}_walk_${dir}_${walkFrame}`);
-        }
+        const dir = dx >= 0 ? "se" : "sw";
+        this.characterSprite.setTexture(`${spriteKey}_iso_walk_${dir}_${walkFrame}`);
       }
     });
 
     this.walkTween = this.scene.tweens.add({
       targets: this,
-      x: targetPos.x,
-      y: targetPos.y,
+      x: destX,
+      y: destY,
       duration,
-      ease: "Linear",
+      ease: "Sine.easeInOut",
       onUpdate: () => {
-        this.setDepth(this.y + 20);
+        this.setDepth(getIsoDepth(this.y, 0, 20));
       },
       onComplete: () => {
         walkTimer.remove();
-        this.characterSprite.setTexture(`${spriteKey}_stand_down`);
-
-        // Abrir diálogo de colaboración
-        this.showCollaborationBubble(targetAgent, event, () => {
-          this.walkBackHome();
-        });
+        this.characterSprite.setTexture(`${spriteKey}_iso_stand`);
+        onComplete();
       }
     });
   }
 
   /**
-   * Muestra el SpeechBubble y gestiona la interacción
+   * Muestra el SpeechBubble glassmorphism y gestiona la interacción
    */
-  private showCollaborationBubble(
+  public showCollaborationBubble(
     targetAgent: AgentSprite,
     event: OfficeEvent,
     onFinish: () => void
@@ -337,13 +382,14 @@ export class AgentSprite extends Phaser.GameObjects.Container {
 
     const message =
       event.content ||
-      (event.toolName ? `Ejecutando herramienta: ${event.toolName}` : "Sincronizando estado de tareas...");
+      (event.toolName ? `Ejecutando herramienta: ${event.toolName}` : "Sincronizando tareas en el Hub...");
 
     this.currentBubble = new SpeechBubble(this.scene, this.x, this.y - 20, {
       speakerName: this.metadata.name,
       targetName: targetAgent.metadata.name,
       message,
       durationMs: 4000,
+      accentColor: this.getProviderColor(),
       onComplete: () => {
         this.currentBubble = undefined;
         onFinish();
@@ -356,43 +402,10 @@ export class AgentSprite extends Phaser.GameObjects.Container {
    */
   public walkBackHome(): void {
     this.isReturningHome = true;
-    const spriteKey = this.metadata.sprite || "avatar_blue";
-
-    const dx = this.homePos.x - this.x;
-    const dy = this.homePos.y - this.y;
-    const distance = Phaser.Math.Distance.Between(this.x, this.y, this.homePos.x, this.homePos.y);
-    const duration = Math.max(800, (distance / 120) * 1000);
-
-    let walkFrame = 0;
-    const walkTimer = this.scene.time.addEvent({
-      delay: 160,
-      loop: true,
-      callback: () => {
-        walkFrame = walkFrame === 0 ? 1 : 0;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          const dir = dx > 0 ? "right" : "left";
-          this.characterSprite.setTexture(`${spriteKey}_walk_${dir}_${walkFrame}`);
-        } else {
-          const dir = dy < 0 ? "up" : "down";
-          this.characterSprite.setTexture(dir === "up" ? `${spriteKey}_stand_up` : `${spriteKey}_walk_down_${walkFrame}`);
-        }
-      }
-    });
-
-    this.walkTween = this.scene.tweens.add({
-      targets: this,
-      x: this.homePos.x,
-      y: this.homePos.y,
-      duration,
-      ease: "Linear",
-      onUpdate: () => {
-        this.setDepth(this.y + 20);
-      },
-      onComplete: () => {
-        walkTimer.remove();
-        this.isReturningHome = false;
-        this.applyIdleState();
-      }
+    this.isInMeeting = false;
+    this.walkTo(this.homePos.x, this.homePos.y, () => {
+      this.isReturningHome = false;
+      this.applyIdleState();
     });
   }
 
