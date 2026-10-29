@@ -124,13 +124,13 @@ npm install
 ```
 
 ### 3. Iniciar la Oficina Virtual (Servidor + Cliente)
-Con un solo comando arrancarás el daemon backend (puerto 4000) y el visualizador Phaser 3 (puerto 3000):
+Con un solo comando arrancarás el daemon backend (puerto 4000) y el visualizador Phaser 3 (puerto 5173):
 
 ```bash
 npm run dev
 ```
 
-* **Visualizador Web:** Abre tu navegador en [http://localhost:3000](http://localhost:3000)
+* **Visualizador Web:** Abre tu navegador en [http://localhost:5173](http://localhost:5173)
 * **API y Healthcheck:** [http://localhost:4000/health](http://localhost:4000/health)
 
 > [!TIP]
