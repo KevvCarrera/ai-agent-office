@@ -1,0 +1,39 @@
+# AI Agent Office Configuration
+
+version: "1.0"
+
+settings:
+  refresh_rate_ms: 500
+  websocket_port: 4000
+  http_port: 3000
+
+offices:
+  - id: "architecture_room"
+    name: "Sala de Arquitectura"
+    desk_coords: { x: 4, y: 3 }
+    assigned_agent: "architect"
+  - id: "dev_lab"
+    name: "Despacho Backend"
+    desk_coords: { x: 10, y: 3 }
+    assigned_agent: "backend-developer"
+  - id: "qa_office"
+    name: "Mesa de QA & Verificación"
+    desk_coords: { x: 7, y: 8 }
+    assigned_agent: "qa-engineer"
+
+agents:
+  - id: "architect"
+    name: "Architect Agent"
+    model: "Claude 3.7 Sonnet (Claude Code)"
+    sprite: "avatar_blue"
+    watch_target: "logs/architect.jsonl"
+  - id: "backend-developer"
+    name: "Backend Developer"
+    model: "Gemini 2.5 Flash"
+    sprite: "avatar_green"
+    watch_target: "logs/backend.jsonl"
+  - id: "qa-engineer"
+    name: "QA Specialist"
+    model: "Claude 3.5 Haiku"
+    sprite: "avatar_purple"
+    watch_target: "logs/qa.jsonl"
